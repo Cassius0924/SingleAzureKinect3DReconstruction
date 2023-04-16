@@ -21,7 +21,7 @@ include_directories("/usr/include/eigen3")
 find_package(Open3D HINTS REQUIRED)
 
 # Declare the executable target built from your sources
-add_executable(AcquiringPointCloud AcquiringPointCloud.cpp CasAzureKinectExtrinsics.cpp)
+add_executable(AcquiringPointCloud src/AcquiringPointCloud.cpp src/CasAzureKinectExtrinsics.cpp)
 
 # Link your application with other libraries
 target_link_libraries(AcquiringPointCloud
@@ -114,7 +114,7 @@ include_directories(${Open3D_INCLUDE_DIRS})
 include_directories(/usr/local/include/open3d/3rdparty)
 link_directories(${Open3D_LIBRARY_DIRS})
 
-add_executable(CasViewingPointCloud CasViewingPointCloud.cpp)
+add_executable(CasViewingPointCloud src/CasViewingPointCloud.cpp)
 
 target_link_libraries(CasViewingPointCloud ${Open3D_LIBRARIES})
 
