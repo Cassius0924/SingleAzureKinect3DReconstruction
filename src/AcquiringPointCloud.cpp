@@ -32,16 +32,14 @@ int main(int argc, char *argv[]) {
         return -1;
     } else {
         std::cout << "Found " << device_count << " connected devices. " << std::endl;
-        if (1 != device_count)// 超过1个设备，也输出错误信息。
-        {
+        if (1 != device_count) {    // 超过1个设备，也输出错误信息。
             std::cout << "Error: more than one K4A devices found. " << std::endl;
             return -1;
-        } else// 该示例代码仅限对1个设备操作
-        {
+        } else { // 该示例代码仅限对1个设备操作
             std::cout << "Done: found 1 K4A device. " << std::endl;
         }
-
     }
+
     // 打开（默认）设备
     k4a::device device = k4a::device::open(K4A_DEVICE_DEFAULT);
     std::cout << "Done: open device. " << std::endl;
@@ -73,7 +71,6 @@ int main(int argc, char *argv[]) {
                 std::cout << "Done: auto-exposure" << std::endl;
                 break;// 跳出该循环，完成相机的稳定过程
             }
-
         } else {
             std::cout << i_auto_error << ". K4A_WAIT_RESULT_TIMEOUT." << std::endl;
             if (i_auto_error != 30) {
@@ -225,18 +222,7 @@ int main(int argc, char *argv[]) {
             }
 
 //            need_cal_cloud = false;
-
-            //使用RemoveStatisticalOutliers函数去除离群点
-            int nb_neighbors = 20;
-            double std_ratio = 2.0;
-
-            //======
-//            pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud <pcl::PointXYZRGB>);
-//            pcl::VoxelGrid <pcl::PointXYZRGB> sor;
-//            sor.setInputCloud(cloud);
-//            sor.setLeafSize(0.01f, 0.01f, 0.01f);
-//            sor.filter(*cloud_filtered);
-            //=======
+            // TODO: 将捕获的图像存到容器中，新建一个线程，将容器中的图像逐份处理
 
             //==========================================
             //先把点云数据序列化成字节数组
@@ -252,7 +238,6 @@ int main(int argc, char *argv[]) {
 //            std::string serialized_data = ss.str();
 //            webSocket.sendPointCloud(serialized_data);
             //==========================================
-
         }
     });
 
@@ -285,14 +270,11 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        //如果旋转角度大于2π，就退出
+        //如果旋转角度大于π，就退出
         if (abs(prev_angle.yaw) > 3.2) {
             cout << "旋转角度大于π，退出" << endl;
             ready_to_break = true;
             //TODO: 消除冗余点
-            //使用RemoveStatisticalOutliers函数去除离群点
-//            auto result = final_cloud->RemoveStatisticalOutliers(nb_neighbors, std_ratio);
-//            auto filtered_cloud = std::get<0>(result);
 
             cout << "等待线程结束..." << endl;
             while (true) {
