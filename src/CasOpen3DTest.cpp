@@ -1,3 +1,12 @@
+//
+// Created by HoChihChou on 4/9/23.
+//
+
+/*
+ * 此文件仅用于测试Open3D库是可用
+ * 后面将会删除
+ */
+
 #include <string>
 #include <open3d/Open3D.h>
 
