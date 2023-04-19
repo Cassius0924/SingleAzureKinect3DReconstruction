@@ -34,8 +34,7 @@ int main(int argc, char *argv[]) {
         cout << "Error: no K4A devices found. " << endl;
         return -1;
     } else {
-        cout << "Found " << device_count << " connected devices. "
-                  << endl;
+        cout << "Found " << device_count << " connected devices. " << endl;
         if (1 != device_count) {// 超过1个设备，也输出错误信息。
             cout << "Error: more than one K4A devices found. " << endl;
             return -1;
@@ -54,9 +53,7 @@ int main(int argc, char *argv[]) {
     config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
     config.color_resolution = K4A_COLOR_RESOLUTION_720P;
     config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-    config.synchronized_images_only =
-            true;// ensures that depth and color images are both available in the
-                 // capture
+    config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
     device.start_cameras(&config);
     cout << "Done: start camera." << endl;
 
@@ -165,7 +162,7 @@ int main(int argc, char *argv[]) {
             device.get_capture(&capture);
 
             // 存入结构体
-            image_data.angle = prev_angle;      // 获取当前时刻的欧拉角
+            image_data.angle = prev_angle;// 获取当前时刻的欧拉角
             image_data.rgb_image = capture.get_color_image();
             image_data.depth_image = capture.get_depth_image();
 
@@ -255,20 +252,47 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            Eigen::Matrix3d rotation_matrix;
-            rotation_matrix << cas::eulerAngle2RotationMatrix(image_data.angle);
-            // 定义个绕y轴旋转90度的旋转矩阵
-            // rotation_matrix << 0, 0, 1,
-            //                  0, 1, 0,
-            //                  -1, 0, 0;
+            // Eigen::Matrix3d rotation_matrix;
+            // rotation_matrix << cas::eulerAngle2RotationMatrix(image_data.angle);
 
+            //# 点到面的ICP
+            // current_transformation = np.identity(4)
+            // print("2. 在原始点云上应用点到平面ICP配准来精准对齐，距离阈值0.02。")
+            // result_icp = o3d.pipelines.registration.registration_icp(source, target, 0.02, current_transformation,
+            //                                                          o3d.pipelines.registration.TransformationEstimationPointToPlane())
+            // print(result_icp)
+            // draw_registration_result_original_color(source, target, result_icp.transformation)
+            // 改为C++实现
             if (flag == 0) {
-                flag = 1;
+                flag == 1;
             } else {
-                Eigen::Vector3d center << 0, 0, 0;
-                cloud->Rotate(rotation_matrix, center);
+                Eigen::Matrix4d transformation_icp = Eigen::Matrix4d::Identity();
+                auto result_icp = open3d::pipelines::registration::RegistrationICP(*final_cloud, *cloud, 0.02, transformation_icp, open3d::pipelines::registration::TransformationEstimationPointToPlane());
+                final_cloud->Transform(result_icp.transformation_);
+
+
+                // // Open3D实现彩色ICP配准
+                // open3d::pipelines::registration::CorrespondenceCheckerBasedOnDistance checker(0.05);
+                // auto correspondence_set = open3d::pipelines::registration::Compute
+                //         open3d::registration::Feature feature_source,
+                //      feature_target;
+                // feature_source = open3d::registration::ComputePointFeatureFromXYZRGB(*final_cloud);
+                // feature_target = open3d::registration::ComputePointFeatureFromXYZRGB(*cloud);
+                // open3d::pipelines::registration::TransformationEstimationPointToPointWithNormals estimation(true);
+                // estimation.estimate(*source, *target, feature_source, feature_target, correspondence_set);
+                // auto transformation_icp = estimation.getInformation().transformation_;
+
+                // final_cloud->Transform(transformation_icp);
             }
-            cloud = cloud->VoxelDownSample(0.01);
+
+
+            // if (flag == 0) {
+            //     flag = 1;
+            // } else {
+            //     Eigen::Vector3d center << 0, 0, 0;
+            //     cloud->Rotate(rotation_matrix, center);
+            // }
+            // cloud = cloud->VoxelDownSample(0.01);
             *final_cloud += *cloud;
 
             cloud_task_count--;
@@ -309,7 +333,7 @@ int main(int argc, char *argv[]) {
             float gx = 0;
             float gy = 0;
             float gz = imu_sample.gyro_sample.xyz.z;
-            
+
             float dtf = (float) (imu_sample.acc_timestamp_usec - temp) / 1000000;
             if (temp == 0) {
                 temp = (float) imu_sample.acc_timestamp_usec;
