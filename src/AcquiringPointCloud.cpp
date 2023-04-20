@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
                 Eigen::Vector3d center = Eigen::Vector3d::Zero();
                 cloud->Rotate(rotation_matrix, center);
 
-                //细配准: 基于彩色 ICP 算法
+                //精配准: 基于彩色 ICP 算法
                 final_cloud->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxel_radius * 2, 30));//法向量估计
                 cloud->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxel_radius * 2, 30));
                 Eigen::Matrix4d transformation_icp = Eigen::Matrix4d::Identity();
