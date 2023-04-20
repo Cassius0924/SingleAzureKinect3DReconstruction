@@ -252,47 +252,30 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            // Eigen::Matrix3d rotation_matrix;
-            // rotation_matrix << cas::eulerAngle2RotationMatrix(image_data.angle);
+            Eigen::Matrix3d rotation_matrix;
+            rotation_matrix << cas::eulerAngle2RotationMatrix(image_data.angle);
 
-            //# 点到面的ICP
-            // current_transformation = np.identity(4)
-            // print("2. 在原始点云上应用点到平面ICP配准来精准对齐，距离阈值0.02。")
-            // result_icp = o3d.pipelines.registration.registration_icp(source, target, 0.02, current_transformation,
-            //                                                          o3d.pipelines.registration.TransformationEstimationPointToPlane())
-            // print(result_icp)
-            // draw_registration_result_original_color(source, target, result_icp.transformation)
-            // 改为C++实现
+            float voxel_radius = 0.1;
+            cloud = cloud->VoxelDownSample(voxel_radius);
+
             if (flag == 0) {
-                flag == 1;
+                flag = 1;
             } else {
+                //粗配准: 基于 IMU 数据的旋转矩阵
+                Eigen::Vector3d center = Eigen::Vector3d::Zero();
+                cloud->Rotate(rotation_matrix, center);
+
+                //细配准: 基于彩色 ICP 算法
+                final_cloud->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxel_radius * 2, 30));//法向量估计
+                cloud->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxel_radius * 2, 30));
                 Eigen::Matrix4d transformation_icp = Eigen::Matrix4d::Identity();
-                auto result_icp = open3d::pipelines::registration::RegistrationICP(*final_cloud, *cloud, 0.02, transformation_icp, open3d::pipelines::registration::TransformationEstimationPointToPlane());
-                final_cloud->Transform(result_icp.transformation_);
-
-
-                // // Open3D实现彩色ICP配准
-                // open3d::pipelines::registration::CorrespondenceCheckerBasedOnDistance checker(0.05);
-                // auto correspondence_set = open3d::pipelines::registration::Compute
-                //         open3d::registration::Feature feature_source,
-                //      feature_target;
-                // feature_source = open3d::registration::ComputePointFeatureFromXYZRGB(*final_cloud);
-                // feature_target = open3d::registration::ComputePointFeatureFromXYZRGB(*cloud);
-                // open3d::pipelines::registration::TransformationEstimationPointToPointWithNormals estimation(true);
-                // estimation.estimate(*source, *target, feature_source, feature_target, correspondence_set);
-                // auto transformation_icp = estimation.getInformation().transformation_;
-
-                // final_cloud->Transform(transformation_icp);
+                float relative_fitness = 1e-6;
+                float relative_rmse = 1e-6;
+                int max_iteration = 30;
+                auto result_icp = open3d::pipelines::registration::RegistrationICP(*cloud, *final_cloud, voxel_radius * 2, transformation_icp, open3d::pipelines::registration::TransformationEstimationPointToPlane(), open3d::pipelines::registration::ICPConvergenceCriteria(relative_fitness, relative_rmse, max_iteration));
+                cloud->Transform(result_icp.transformation_);
             }
 
-
-            // if (flag == 0) {
-            //     flag = 1;
-            // } else {
-            //     Eigen::Vector3d center << 0, 0, 0;
-            //     cloud->Rotate(rotation_matrix, center);
-            // }
-            // cloud = cloud->VoxelDownSample(0.01);
             *final_cloud += *cloud;
 
             cloud_task_count--;
@@ -302,11 +285,6 @@ int main(int argc, char *argv[]) {
             }
 
             // need_cal_cloud = false;
-            // TODO: 将捕获的图像存到容器中，新建一个线程，将容器中的图像逐份处理
-            // 由于图像处理比较耗时，所以需要新建一个线程来处理图像
-
-            // TODO: 实时显示点云
-            // TODO: 消除冗余点。点云相加后会导致很多点重合，需要消除冗余点。
 
             //==========================================
             // 先把点云数据序列化成字节数组
@@ -369,6 +347,8 @@ int main(int argc, char *argv[]) {
                 }
             }
             final_cloud->VoxelDownSample(0.01);
+            // TODO: 三角面片化
+
             open3d::io::WritePointCloud("ply/final_cloud.ply", *final_cloud);
             break;
         }
