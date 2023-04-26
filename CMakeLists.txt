@@ -34,9 +34,10 @@ add_executable(AcquiringPointCloud
         src/Mesh.pb.cc
         )
 
+# 指定头文件目录
 include_directories(include)
 
-target_link_libraries(AcquiringPointCloud PUBLIC
+target_link_libraries(AcquiringPointCloud
         k4a::k4a
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}

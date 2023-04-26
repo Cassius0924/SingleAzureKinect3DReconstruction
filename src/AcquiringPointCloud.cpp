@@ -97,8 +97,8 @@ int main(int argc, char **argv) {
     cout << "-----------------------------------" << endl;
 
     // 读取配置文件
-    // cas::CasConfig config("default.conf");
-    // cout << "读取配置文件成功" << endl;
+    cas::CasConfig config("default.conf");
+    cout << "读取配置文件成功" << endl;
 
     // 从设备获取捕获
     k4a::image rgb_image;
@@ -480,10 +480,10 @@ int main(int argc, char **argv) {
                         write_count++;
                     }
                 }
-                cout << "=============================" << endl;
+                cout << "===============================" << endl;
                 cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
                 cout << "== 面片数量: " << triangles.size() << endl;
-                cout << "=============================" << endl;
+                cout << "===============================" << endl;
             }
             break;
         }
