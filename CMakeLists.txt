@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 
 SET(CMAKE_CXX_STANDARD 17) #Open3D需要C++14以上版本
 SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -lprotobuf ")
 
 #### AcquiringPointCloud  ####
 # Define project name 
@@ -17,18 +17,57 @@ find_package(k4a REQUIRED)# 后面的target_link_libraries中用到了k4a::k4a
 find_package(Eigen3 REQUIRED)
 include_directories("/usr/include/eigen3")
 
-#OPEN3D
-find_package(Open3D HINTS REQUIRED)
+#Protobuf
+find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
+link_directories(${Protobuf_LIBRARY_DIRS})
 
-# Declare the executable target built from your sources
-add_executable(AcquiringPointCloud src/AcquiringPointCloud.cpp src/CasAzureKinectExtrinsics.cpp)
+# OPEN3D
+find_package(Open3D REQUIRED)
+include_directories("/usr/local/include/open3d")
 
-# Link your application with other libraries
-target_link_libraries(AcquiringPointCloud
-        ${Eigen3_LIBRARIES}
-        ${Open3D_LIBRARIES}
-        k4a::k4a
+add_executable(AcquiringPointCloud 
+        src/AcquiringPointCloud.cpp 
+        src/CasAzureKinectExtrinsics.cpp 
+        src/polygon.pb.cc
+        src/Hello.cpp
         )
+
+
+target_link_libraries(AcquiringPointCloud
+        k4a::k4a
+        ${Open3D_LIBRARIES}
+        ${Eigen3_LIBRARIES}
+        ${Protobuf_LIBRARIES}
+        )
+
+
+# cmake_minimum_required(VERSION 3.10)
+
+# SET(CMAKE_CXX_STANDARD 17)
+# SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -lpthread -fvisibility=hidden")
+
+# SET(this_target protoTest)
+
+# find_package(Open3D REQUIRED)
+# include_directories("/usr/local/include/open3d")
+
+# find_package(Protobuf REQUIRED)
+# include_directories("/usr/local/include/google")
+
+# add_executable(protoTest
+#         src/protoTest.cpp
+#         src/polygon.pb.cc
+#         src/Hello.cpp
+#         )
+
+# target_link_libraries(protoTest 
+#         Open3D
+#         ${Protobuf_LIBRARIES}
+#         )
+
+
 
 
 #### CasGeneratePointCloud ####
@@ -104,19 +143,22 @@ target_link_libraries(AcquiringPointCloud
 
 
 
+
+
+
 #### CasViewingPointCloud ####
 # 点云可视化
 
-SET(this_target CasViewingPointCloud)
+# SET(this_target CasViewingPointCloud)
 
-find_package(Open3D HINTS REQUIRED)
-include_directories(${Open3D_INCLUDE_DIRS})
-include_directories(/usr/local/include/open3d/3rdparty)
-link_directories(${Open3D_LIBRARY_DIRS})
+# find_package(Open3D HINTS REQUIRED)
+# include_directories(${Open3D_INCLUDE_DIRS})
+# include_directories(/usr/local/include/open3d/3rdparty)
+# link_directories(${Open3D_LIBRARY_DIRS})
 
-add_executable(CasViewingPointCloud src/CasViewingPointCloud.cpp)
+# add_executable(CasViewingPointCloud src/CasViewingPointCloud.cpp)
 
-target_link_libraries(CasViewingPointCloud ${Open3D_LIBRARIES})
+# target_link_libraries(CasViewingPointCloud ${Open3D_LIBRARIES})
 
 
 

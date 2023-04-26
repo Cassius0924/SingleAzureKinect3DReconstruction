@@ -25,10 +25,24 @@ stack<Eigen::Vector3d> getColorStack() {
 int main(int argc, char **argv) {
     //参数：-c是否上色
     bool isColor = false;
-    if (argc > 1 && strcmp(argv[1], "-c") == 0) {    //有参数，且第一个参数为-c
-        isColor = true;
-        argc--; //参数个数减1
-        argv++; //参数向前移动1位
+    //参数：-m是否为网格
+    bool isMesh = false;
+
+    //判断参数, -c是否上色，-m是否为网格。并将参数从argv中移除
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-c") == 0) {
+            isColor = true;
+            for (int j = i; j < argc - 1; j++) {
+                argv[j] = argv[j + 1];
+            }
+            argc--;
+        } else if (strcmp(argv[i], "-m") == 0) {
+            isMesh = true;
+            for (int j = i; j < argc - 1; j++) {
+                argv[j] = argv[j + 1];
+            }
+            argc--;
+        }
     }
 
     //参数：多个点云文件，pcd或ply
@@ -58,10 +72,15 @@ int main(int argc, char **argv) {
         }
         geometries.push_back(cloud);
     }
-//    auto coord_frame = open3d::geometry::TriangleMesh::CreateCoordinateFrame();
-//    open3d::visualization::DrawGeometries({cloud, coord_frame});
-    open3d::visualization::DrawGeometries(geometries);
 
+    // //判断是否为网格
+    // if (isMesh) {
+    //     //显示网格
+    //     open3d::visualization::DrawGeometries(geometries, "Mesh", 1920, 1080, 0, 0, false, true, true);
+    // } else {
+        //显示点云
+        open3d::visualization::DrawGeometries(geometries, "PointCloud", 1920, 1080, 0, 0);
+    // }
 
     return 0;
 }
