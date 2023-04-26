@@ -30,9 +30,16 @@ add_executable(AcquiringPointCloud
         src/AcquiringPointCloud.cpp 
         src/CasAzureKinectExtrinsics.cpp 
         src/CasConfig.cpp
+        src/CasBot.cpp
         src/CasIp.cpp
         src/Mesh.pb.cc
         )
+
+# add_executable(TcpTest
+#         src/TcpTest.cpp
+#         src/CasIp.cpp
+#         src/Mesh.pb.cc
+#         )
 
 # 指定头文件目录
 include_directories(include)

@@ -17,7 +17,9 @@ void tirm(string &str) {
 
 CasConfig::CasConfig(const string config_path, const char comment_char) {
     ifstream in(config_path);   
-    if (!in) {
+    if (in) {
+        cout << "打开配置文件成功" << endl;
+    } else {
         cout << "配置文件不存在" << endl;
         return;
     }
@@ -44,5 +46,36 @@ string CasConfig::get(const string key) {
     if (iter != this->config_map.end()) {   //找到了
         return iter->second;
     }
+    cout << "找不到配置项: " << key << "，返回默认值 \"\"" << endl;
     return "";
+}
+
+float CasConfig::get_float(const string key) {
+    map<string, string>::iterator iter;
+    iter = this->config_map.find(key);
+    if (iter != this->config_map.end()) {
+        return stof(iter->second);
+    }
+    cout << "找不到配置项: " << key << "，返回默认值 0.0" << endl;
+    return 0.0;
+}
+
+int CasConfig::get_int(const string key) {
+    map<string, string>::iterator iter;
+    iter = this->config_map.find(key);
+    if (iter != this->config_map.end()) {
+        return stoi(iter->second);
+    }
+    cout << "找不到配置项: " << key << "，返回默认值 0" << endl;
+    return 0;
+}
+
+bool CasConfig::get_bool(const string key) {
+    map<string, string>::iterator iter;
+    iter = this->config_map.find(key);
+    if (iter != this->config_map.end()) {
+        return iter->second == "true";
+    }
+    cout << "找不到配置项: " << key << "，返回默认值 false" << endl;
+    return false;
 }

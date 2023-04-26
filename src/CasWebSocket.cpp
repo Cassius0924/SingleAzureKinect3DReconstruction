@@ -92,6 +92,21 @@ void WebSocket::sendPointCloud(string pointCloudData) {
 }
 
 
+            //==========================================
+            // 先把点云数据序列化成字节数组
+            // ofstream ofs("pcd_oarchive/" + filename_pc + ".pcd");
+            // boost::archive::text_oarchive oa(ofs);
+            // oa << *cloud_filtered;
+            // ofs.close();
+            // ifstream ifs("pcd/" + filename_pc + ".pcd");
+            // stringstream ss;
+            // ss << ifs.rdbuf();
+            // ifs.close();
+            // string serialized_data = ss.str();
+            // webSocket.sendPointCloud(serialized_data);
+            //==========================================
+
+
 //int main()
 //{
 //    namespace beast = boost::beast;

@@ -8,6 +8,7 @@
  */
 
 #include "CasAzureKinectExtrinsics.h"
+#include "CasBot.h"
 #include "CasConfig.h"
 #include "CasIp.h"
 #include "Mesh.pb.h"
@@ -25,18 +26,38 @@
 // Open3D
 #include <open3d/Open3D.h>
 
-#define INTERVAL_RADIAN 0.4
-#define EXIT_RADIAN 3.2 * 2
-#define VOXEL_SIZE 0.05
-#define FINAL_VOXEL_SIZE 0.01
-#define SMALL_RADIUS_MULTIPLIER 2
-#define LARGE_RADIUS_MULTIPLIER 4
-#define IS_WRITE_FILE false
-#define IS_CONNECT_SERVER true
+// #define INTERVAL_RADIAN 0.4
+// #define EXIT_RADIAN 3.2
+// #define VOXEL_SIZE 0.05
+// #define FINAL_VOXEL_SIZE 0.01
+// #define SMALL_RADIUS_MULTIPLIER 2
+// #define LARGE_RADIUS_MULTIPLIER 4
+// #define IS_WRITE_FILE false
+// #define IS_CONNECT_SERVER true
+// #define IS_CONNECT_BOT false
 
 using namespace std;
 
 int main(int argc, char **argv) {
+    // 读取配置文件
+    cas::CasConfig cas_config("../default.conf");
+
+    float INTERVAL_RADIAN = cas_config.get_float("interval_radian");
+    float EXIT_RADIAN = cas_config.get_float("exit_radian");
+    float VOXEL_SIZE = cas_config.get_float("voxel_size");
+    float FINAL_VOXEL_SIZE = cas_config.get_float("final_voxel_size");
+    float SMALL_RADIUS_MULTIPLIER = cas_config.get_float("small_radius_multiplier");
+    float LARGE_RADIUS_MULTIPLIER = cas_config.get_float("large_radius_multiplier");
+    string WEB_SOCKET_SERVER_ADDRESS = cas_config.get("web_socket_server_address");
+    int WEB_SOCKET_SERVER_PORT = cas_config.get_int("web_socket_server_port");
+    string WEB_SOCKET_SERVER_PATH = cas_config.get("web_socket_server_path");
+    bool IS_WRITE_FILE = cas_config.get_bool("is_write_file");
+    string CLOUD_FILE_PATH = cas_config.get("cloud_file_path");
+    string MESH_FILE_PATH = cas_config.get("mesh_file_path");
+    bool IS_CONNECT_SERVER = cas_config.get_bool("is_connect_server");
+    bool IS_CONNECT_BOT = cas_config.get_bool("is_connect_bot");
+    int PROTOBUF_SERVER_PORT = cas_config.get_int("protobuf_server_port");
+
     // 发现已连接的设备数
     const uint32_t device_count = k4a::device::get_installed_count();
     if (0 == device_count) {
@@ -96,15 +117,9 @@ int main(int argc, char **argv) {
     cout << "----- Have Started Kinect DK. -----" << endl;
     cout << "-----------------------------------" << endl;
 
-    // 读取配置文件
-    cas::CasConfig config("default.conf");
-    cout << "读取配置文件成功" << endl;
-
     // 从设备获取捕获
     k4a::image rgb_image;
     k4a::image depth_image;
-    // k4a::image transformed_depthImage;
-    // k4a::image point_cloud_image;
 
     int color_image_width_pixels = 0;
     int color_image_height_pixels = 0;
@@ -146,9 +161,11 @@ int main(int argc, char **argv) {
     // 定义互斥锁
     mutex camera_mutex;
     mutex cloud_mutex;
+    mutex arm_mutex;
     // 定义条件变量
     condition_variable camera_cv;
     condition_variable cloud_cv;
+    condition_variable arm_cv;
     // 定义共享变量
     bool ready_to_break = false;
     bool need_break = false;
@@ -158,8 +175,24 @@ int main(int argc, char **argv) {
 
     cas::EulerAngle cur_angle(0, 0, 0);
 
-    cas::CasIp cas_ip;
-    
+    int fd_car, fd_arm;
+    unsigned char tempbuff[1024]; /*临时缓存*/
+    unsigned char databuff[18];
+    int recv_long = 0;
+
+    // ====机械臂====
+    if (IS_CONNECT_BOT) {
+        if ((fd_arm = mysys_arm_init()) < 0) {
+            cout << "机械臂设备初始化失败" << endl;
+            return -1;
+        }
+        mysys_resetMycobot(fd_arm);
+        cout << "机械臂复位成功" << endl;
+    }
+
+
+    // ============
+
     int server_socket_fd = -1;
     int client_fd = -1;
     struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
@@ -169,10 +202,10 @@ int main(int argc, char **argv) {
     struct sockaddr_in sockaddr;
     memset(&sockaddr, 0, sizeof(sockaddr));
     sockaddr.sin_family = AF_INET;
-    sockaddr.sin_port = htons(5001);
+    sockaddr.sin_port = htons(PROTOBUF_SERVER_PORT);
 
+    cas::CasIp cas_ip;
     char ip_local[32 + 1] = {0};
-
     if (!cas_ip.get_local_ip(ip_local)) {
         cout << "连接IP失败: " << ip_local << endl;
         return -1;
@@ -181,18 +214,17 @@ int main(int argc, char **argv) {
 
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket_fd < 0) {
-        perror("Socket create failed!\n");
+        cerr << "Socket 创建失败" << endl;
         return -1;
     }
 
-    if (bind(server_socket_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) != 0)
-    {
-        perror("Socket bind failed!\n");
+    if (bind(server_socket_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) != 0) {
+        cerr << "Socket 绑定失败" << endl;
         close(server_socket_fd);
         return -1;
     }
     if (listen(server_socket_fd, 1) != 0) {
-        perror("Socket listen failed!\n");
+        cerr << "Socket 监听失败" << endl;
         close(server_socket_fd);
         return -1;
     }
@@ -201,14 +233,15 @@ int main(int argc, char **argv) {
     cout << "等待客户端连接..." << endl;
 
     client_fd = accept(server_socket_fd, (struct sockaddr *) addr, &addr_len);
+    cout << "客户端连接成功" << endl;
 
     if (client_fd < 0) {
-        cerr << "Socket accept failed" << endl;
+        cerr << "Socket 接收失败" << endl;
         close(server_socket_fd);
         free(addr);
         return -1;
     } else {
-        cout << "IP地址: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
+        cout << "客户端IP: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
     };
 
     // 定义相机线程
@@ -307,7 +340,9 @@ int main(int argc, char **argv) {
             Eigen::Matrix3d rotation_matrix;
             rotation_matrix << cas::eulerAngle2RotationMatrix(image_data.angle);
 
-            cloud = cloud->VoxelDownSample(VOXEL_SIZE);
+            if (VOXEL_SIZE > 0) {
+                cloud = cloud->VoxelDownSample(VOXEL_SIZE);
+            }
 
             if (flag == 0) {
                 flag = 1;
@@ -334,23 +369,28 @@ int main(int argc, char **argv) {
             if (ready_to_break && cloud_task_count <= 0) {
                 need_break = true;
             }
-
-            //==========================================
-            // 先把点云数据序列化成字节数组
-            // ofstream ofs("pcd_oarchive/" + filename_pc + ".pcd");
-            // boost::archive::text_oarchive oa(ofs);
-            // oa << *cloud_filtered;
-            // ofs.close();
-            // ifstream ifs("pcd/" + filename_pc + ".pcd");
-            // stringstream ss;
-            // ss << ifs.rdbuf();
-            // ifs.close();
-            // string serialized_data = ss.str();
-            // webSocket.sendPointCloud(serialized_data);
-            //==========================================
         }
     });
 
+    // 机械臂线程
+    thread arm_thread([&]() {
+        while (true) {
+            unique_lock<mutex> lock(arm_mutex);
+
+            // 等待接受到机械臂的数据
+            recv_long = recv(client_fd, tempbuff, 1024, 0);
+
+            memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入databuff中
+
+            for (int j = 0; j < recv_long; j++) {
+                cout << hex << (int) databuff[j] << " ";
+            }
+            cout << endl;
+
+            // 发送数据给机械臂
+            write(fd_arm, databuff, recv_long);
+        }
+    });
 
     // 主线程获取IMU数据
     while (true) {
@@ -372,7 +412,6 @@ int main(int argc, char **argv) {
             prev_angle = calculateOrientation(gx, gy, gz, dtf, prev_angle);
 
             if (abs(prev_angle.yaw - prev_yaw) > INTERVAL_RADIAN) {
-                // 启动相机
                 // prev_roll = prev_angle.roll;
                 // prev_pitch = prev_angle.pitch;
                 prev_yaw = prev_angle.yaw;
@@ -406,11 +445,11 @@ int main(int argc, char **argv) {
             vector<double> radii = {radius, radius * 2};
             // 使用球形扫描算法创建三角网格
             auto pba_mesh = open3d::geometry::TriangleMesh::CreateFromPointCloudBallPivoting(*final_cloud, radii);
-            auto smooth_mesh = pba_mesh->FilterSmoothTaubin(100, 0.5, 0.5);
+            // auto smooth_mesh = pba_mesh->FilterSmoothTaubin(100, 0.5, 0.5);
 
             // 使用四边形网格的几何减简算法对三角网格进行几何减简
             // auto des_mesh = pba_mesh->SimplifyQuadricDecimation(100000);
-            auto des_mesh = smooth_mesh;
+            auto des_mesh = pba_mesh;
             des_mesh->RemoveDuplicatedTriangles();// 去除重复三角形
             des_mesh->RemoveDuplicatedVertices(); // 去除重复顶点
             des_mesh->RemoveNonManifoldEdges();   // 去除非流形边
@@ -420,11 +459,13 @@ int main(int argc, char **argv) {
             // Poisson 泊松重建（不适合室内环境）
             // auto poisson_mesh = get<0>(open3d::geometry::TriangleMesh::CreateFromPointCloudPoisson(*final_cloud, 8, 0, 1.1, false));
 
-            // final_cloud->VoxelDownSample(FINAL_VOXEL_SIZE);
+            if (FINAL_VOXEL_SIZE > 0) {
+                final_cloud->VoxelDownSample(FINAL_VOXEL_SIZE);
+            }
 
             if (IS_WRITE_FILE) {
-                open3d::io::WritePointCloud("ply/final_cloud.ply", *final_cloud);
-                open3d::io::WriteTriangleMesh("ply/final_mesh.ply", *des_mesh);
+                open3d::io::WritePointCloud(CLOUD_FILE_PATH, *final_cloud);
+                open3d::io::WriteTriangleMesh(MESH_FILE_PATH, *des_mesh);
             }
 
             if (IS_CONNECT_SERVER) {
@@ -463,17 +504,17 @@ int main(int argc, char **argv) {
 
                     if ((i + 1) % 800 == 0 || i == triangles.size() - 1) {
                         // 创建一个内存输出流
-                        std::ostringstream output_stream(std::ios::binary);
+                        ostringstream output_stream(ios::binary);
 
                         // 将 pg 对象序列化到内存输出流中
                         if (!mesh_message.SerializeToOstream(&output_stream)) {
-                            std::cerr << "Failed to serialize pg message" << std::endl;
+                            cerr << "序列化消息失败" << endl;
                         }
 
                         // 获取序列化后的数据并发送到网络对端
-                        std::string serialized_data = output_stream.str();
+                        string serialized_data = output_stream.str();
                         if (write(client_fd, serialized_data.data(), serialized_data.size()) < 0) {
-                            std::cerr << "Failed to send data to the network endpoint" << std::endl;
+                            cerr << "发送消息失败" << endl;
                         }
 
                         mesh_message.Clear();
@@ -484,10 +525,20 @@ int main(int argc, char **argv) {
                 cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
                 cout << "== 面片数量: " << triangles.size() << endl;
                 cout << "===============================" << endl;
+                break;
             }
+            // 发送结束标志，0长度的字符串
+            write(client_fd, "", 0);
+            cout << "发送结束标志" << endl;
             break;
         }
     }
+
+    // while (true) {
+    //     cout << "DEBUG: 等待..." << endl;
+    //     char c = getchar();
+    // }
+
     // 断开连接
     close(client_fd);
     cout << "连接已断开" << endl;

@@ -28,7 +28,7 @@ bool cas::CasIp::get_local_ip(char *ip) {
                     //拿到该网口地址做对比
                     ip = (inet_ntoa(((struct sockaddr_in *) (&buf[intrface].ifr_addr))->sin_addr));
                     if (strstr(ip, "192.168.")) {
-                        cout << "IP:" << ip << endl;
+                        cout << "服务器本地IP:" << ip << endl;
                         break;
                     }
                 }

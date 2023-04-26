@@ -24,6 +24,12 @@ namespace cas {
         CasConfig(const string config_path, const char comment_char = COMMENT_CHAR);
 
         string get(const string key);
+
+        float get_float(const string key);
+
+        int get_int(const string key);
+
+        bool get_bool(const string key);
     };
 }// namespace cas
 
