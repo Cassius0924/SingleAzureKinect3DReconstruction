@@ -15,7 +15,7 @@ void tirm(string &str) {
     str.erase(str.find_last_not_of(" ") + 1);
 }
 
-CasConfig::CasConfig(const string config_path, const char comment_char = COMMENT_CHAR) {
+CasConfig::CasConfig(const string config_path, const char comment_char) {
     ifstream in(config_path);   
     if (!in) {
         cout << "配置文件不存在" << endl;

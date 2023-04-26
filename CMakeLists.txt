@@ -3,15 +3,15 @@ cmake_minimum_required(VERSION 3.10)
 
 SET(CMAKE_CXX_STANDARD 17) #Open3D需要C++14以上版本
 SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -lprotobuf ")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")
 
 #### AcquiringPointCloud  ####
 # Define project name 
-# project(AcquiringPointCloud)
+project(CasPointCloud)
 SET(this_target AcquiringPointCloud)
 
 # Kinect DK相机
-find_package(k4a REQUIRED)# 后面的target_link_libraries中用到了k4a::k4a
+find_package(k4a REQUIRED)
 
 # eigen
 find_package(Eigen3 REQUIRED)
@@ -29,45 +29,19 @@ include_directories("/usr/local/include/open3d")
 add_executable(AcquiringPointCloud 
         src/AcquiringPointCloud.cpp 
         src/CasAzureKinectExtrinsics.cpp 
-        src/polygon.pb.cc
-        src/Hello.cpp
+        src/CasConfig.cpp
+        src/CasIp.cpp
+        src/Mesh.pb.cc
         )
 
+include_directories(include)
 
-target_link_libraries(AcquiringPointCloud
+target_link_libraries(AcquiringPointCloud PUBLIC
         k4a::k4a
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}
         ${Protobuf_LIBRARIES}
         )
-
-
-# cmake_minimum_required(VERSION 3.10)
-
-# SET(CMAKE_CXX_STANDARD 17)
-# SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -lpthread -fvisibility=hidden")
-
-# SET(this_target protoTest)
-
-# find_package(Open3D REQUIRED)
-# include_directories("/usr/local/include/open3d")
-
-# find_package(Protobuf REQUIRED)
-# include_directories("/usr/local/include/google")
-
-# add_executable(protoTest
-#         src/protoTest.cpp
-#         src/polygon.pb.cc
-#         src/Hello.cpp
-#         )
-
-# target_link_libraries(protoTest 
-#         Open3D
-#         ${Protobuf_LIBRARIES}
-#         )
-
-
 
 
 #### CasGeneratePointCloud ####

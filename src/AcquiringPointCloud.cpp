@@ -9,8 +9,8 @@
 
 #include "CasAzureKinectExtrinsics.h"
 #include "CasConfig.h"
-#include "Hello.h"
-#include "polygon.pb.h"
+#include "CasIp.h"
+#include "Mesh.pb.h"
 
 // #include "CasWebSocket.h"
 
@@ -26,9 +26,13 @@
 #include <open3d/Open3D.h>
 
 #define INTERVAL_RADIAN 0.4
-#define EXIT_RADIAN 3.2
+#define EXIT_RADIAN 3.2 * 2
 #define VOXEL_SIZE 0.05
 #define FINAL_VOXEL_SIZE 0.01
+#define SMALL_RADIUS_MULTIPLIER 2
+#define LARGE_RADIUS_MULTIPLIER 4
+#define IS_WRITE_FILE false
+#define IS_CONNECT_SERVER true
 
 using namespace std;
 
@@ -116,8 +120,6 @@ int main(int argc, char **argv) {
     vector<ImageData> image_data_vector;
 
     // 先创建个WebSocket对象
-    // 服务器地址：ws://175.178.56.40:8080/ws-test
-    // WebSocket webSocket("175.178.56.40","8080","/ws-test");
     // // WebSocket webSocket("ws://39.108.216.190/ws");
     // //连接服务器
     // if (webSocket.connect()) {
@@ -156,18 +158,9 @@ int main(int argc, char **argv) {
 
     cas::EulerAngle cur_angle(0, 0, 0);
 
-    Hello hi;
-
-    unsigned char tempbuff[1024];
-    unsigned char databuff[18];
-
-    int fd_network;
+    cas::CasIp cas_ip;
+    
     int server_socket_fd = -1;
-
-    int recv_long = 0;
-
-    pthread_t recv_threadID = -1;
-
     int client_fd = -1;
     struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
     socklen_t addr_len = (socklen_t) sizeof(*addr);
@@ -180,8 +173,8 @@ int main(int argc, char **argv) {
 
     char ip_local[32 + 1] = {0};
 
-    if (hi.get_local_ip(ip_local) != 0) {
-        printf("ip地址\n");
+    if (!cas_ip.get_local_ip(ip_local)) {
+        cout << "连接IP失败: " << ip_local << endl;
         return -1;
     }
     inet_aton(ip_local, &sockaddr.sin_addr);
@@ -192,14 +185,13 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    if (bind(server_socket_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) != 0)//∞Û∂®µÿ÷∑∫Õ∂Àø⁄∫≈
+    if (bind(server_socket_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) != 0)
     {
         perror("Socket bind failed!\n");
         close(server_socket_fd);
         return -1;
     }
-    if (listen(server_socket_fd, 1) != 0)
-    {
+    if (listen(server_socket_fd, 1) != 0) {
         perror("Socket listen failed!\n");
         close(server_socket_fd);
         return -1;
@@ -211,12 +203,12 @@ int main(int argc, char **argv) {
     client_fd = accept(server_socket_fd, (struct sockaddr *) addr, &addr_len);
 
     if (client_fd < 0) {
-        perror("Socket accept failed\n");
+        cerr << "Socket accept failed" << endl;
         close(server_socket_fd);
         free(addr);
         return -1;
     } else {
-        printf("IP地址: %s:%d", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+        cout << "IP地址: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
     };
 
     // 定义相机线程
@@ -343,7 +335,6 @@ int main(int argc, char **argv) {
                 need_break = true;
             }
 
-
             //==========================================
             // 先把点云数据序列化成字节数组
             // ofstream ofs("pcd_oarchive/" + filename_pc + ".pcd");
@@ -357,7 +348,6 @@ int main(int argc, char **argv) {
             // string serialized_data = ss.str();
             // webSocket.sendPointCloud(serialized_data);
             //==========================================
-            // }
         }
     });
 
@@ -386,7 +376,6 @@ int main(int argc, char **argv) {
                 // prev_roll = prev_angle.roll;
                 // prev_pitch = prev_angle.pitch;
                 prev_yaw = prev_angle.yaw;
-                cout << "saving..." << endl;
                 // 修改共享变量
                 camera_task_count++;
                 cout << "通知相机线程:" << camera_task_count << endl;
@@ -406,143 +395,96 @@ int main(int argc, char **argv) {
                 }
             }
 
-            // double alpha = 0.01;// alpha值越大，生成的网格越稀疏
-            // auto mesh = open3d::geometry::TriangleMesh::CreateFromPointCloudAlphaShape(*final_cloud, alpha);
-
             // Boll-Pivoting 球形扫描算法（BPA）
+            cout << "开始三角网格化..." << endl;
             // 计算点云的最近邻距离
             vector<double> distances = final_cloud->ComputeNearestNeighborDistance();
             // 计算平均距离
             double avg_dist = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
             // 设置搜索半径
-            double radius = 3 * avg_dist;
+            double radius = avg_dist * LARGE_RADIUS_MULTIPLIER;
             vector<double> radii = {radius, radius * 2};
             // 使用球形扫描算法创建三角网格
             auto pba_mesh = open3d::geometry::TriangleMesh::CreateFromPointCloudBallPivoting(*final_cloud, radii);
+            auto smooth_mesh = pba_mesh->FilterSmoothTaubin(100, 0.5, 0.5);
+
             // 使用四边形网格的几何减简算法对三角网格进行几何减简
             // auto des_mesh = pba_mesh->SimplifyQuadricDecimation(100000);
-            auto des_mesh = pba_mesh;
-            // des_mesh->RemoveDuplicatedTriangles();// 去除重复三角形
-            // des_mesh->RemoveDuplicatedVertices(); // 去除重复顶点
-            // des_mesh->RemoveNonManifoldEdges();   // 去除非流形边
-            // des_mesh->RemoveDegenerateTriangles();// 去除退化的三角形
-
+            auto des_mesh = smooth_mesh;
+            des_mesh->RemoveDuplicatedTriangles();// 去除重复三角形
+            des_mesh->RemoveDuplicatedVertices(); // 去除重复顶点
+            des_mesh->RemoveNonManifoldEdges();   // 去除非流形边
+            des_mesh->RemoveDegenerateTriangles();// 去除退化的三角形
+            cout << "三角网格化完毕" << endl;
 
             // Poisson 泊松重建（不适合室内环境）
             // auto poisson_mesh = get<0>(open3d::geometry::TriangleMesh::CreateFromPointCloudPoisson(*final_cloud, 8, 0, 1.1, false));
 
             // final_cloud->VoxelDownSample(FINAL_VOXEL_SIZE);
 
-            open3d::io::WritePointCloud("ply/final_cloud.ply", *final_cloud);
-            open3d::io::WriteTriangleMesh("ply/final_mesh.ply", *des_mesh);
-
-            // Protobuf 发数据
-            // 先for循环遍历Mesh数据，把数据放到protobuf的结构体中，把面片的三个顶点分别放到v1、v2、v3中
-            // 然后再把protobuf的结构体序列化成字节数组，再发送出去
-
-            // q: Open3D顶点是如何组成面片的?
-            // a:
-
-
-            my_package::pg pg_message;
-
-            // 顶点坐标
-            const std::vector<Eigen::Vector3d> &vertices = des_mesh->vertices_;
-            // 顶点索引
-            const std::vector<Eigen::Vector3i> &triangles = des_mesh->triangles_;
-            // 顶点颜色
-            const std::vector<Eigen::Vector3d> &colors = des_mesh->vertex_colors_;
-
-            int write_count = 0;
-            int all = 0;
-            cout << triangles[1][0] << " " << triangles[1][1] << " " << triangles[1][2] << endl;
-            for (int i = 0; i < triangles.size(); i++) {
-                my_package::V1 *v1 = pg_message.add_v1();
-                int v1_index = triangles[i][0];
-                v1->set_x(vertices[v1_index][0]);
-                v1->set_y(vertices[v1_index][1]);
-                v1->set_z(vertices[v1_index][2]);
-                // cout << "v1:" << v1->x() << "," << v1->y() << "," << v1->z() << endl;
-
-                my_package::V2 *v2 = pg_message.add_v2();
-                int v2_index = triangles[i][1];
-                v2->set_x(vertices[v2_index][0]);
-                v2->set_y(vertices[v2_index][1]);
-                v2->set_z(vertices[v2_index][2]);
-                // cout << "v2:" << v2->x() << "," << v2->y() << "," << v2->z() << endl;
-
-                my_package::V3 *v3 = pg_message.add_v3();
-                int v3_index = triangles[i][2];
-                v3->set_x(vertices[v3_index][0]);
-                v3->set_y(vertices[v3_index][1]);
-                v3->set_z(vertices[v3_index][2]);
-                // cout << "v3:" << v3->x() << "," << v3->y() << "," << v3->z() << endl;
-                
-                my_package::T *t = pg_message.add_t();
-                t->set_t1(v1_index);
-                t->set_t2(v2_index);
-                t->set_t3(v3_index);
-
-                float color_r = (colors[v1_index][0] + colors[v2_index][0] + colors[v3_index][0]) / 3.0;
-                float color_g = (colors[v1_index][1] + colors[v2_index][1] + colors[v3_index][1]) / 3.0;
-                float color_b = (colors[v1_index][2] + colors[v2_index][2] + colors[v3_index][2]) / 3.0;
-                pg_message.add_r(color_r);
-                pg_message.add_g(color_g);
-                pg_message.add_b(color_b);
-                // cout << "color = " << color_r << "," << color_g << "," << color_b << endl;
-
-                if ((i + 1) % 800 == 0 || i == triangles.size() - 1) {
-                    // 创建一个内存输出流
-                    std::ostringstream output_stream(std::ios::binary);
-
-                    // 将 pg 对象序列化到内存输出流中
-                    if (!pg_message.SerializeToOstream(&output_stream)) {
-                        std::cerr << "Failed to serialize pg message" << std::endl;
-                    }
-
-                    // 获取序列化后的数据并发送到网络对端
-                    std::string serialized_data = output_stream.str();
-                    if (write(client_fd, serialized_data.data(), serialized_data.size()) < 0) {
-                        std::cerr << "Failed to send data to the network endpoint" << std::endl;
-                    }
-
-                    all += serialized_data.size();
-
-                    pg_message.Clear();
-
-                    // cout << "第" << write_count << "次发送，数据大小为: " << pbSize << endl;
-                    write_count++;
-                }
-
-                // if ((i + 1) % ONCE_SEND_MESH_COUNT == 0) {
-                // if ((i + 1) % 500 == 0) {
-                //     int pbSize = pg_message.ByteSize();
-
-                //     //分配内存
-                //     string strPb = "";
-                //     strPb.resize(pbSize);
-
-                //     //序列化
-                //     uint8_t *szData = (uint8_t *) strPb.c_str();
-                //     pg_message.SerializeToArray(szData, pbSize);
-
-                //     cout << "start write" << endl;
-                //     write(client_fd, szData, pbSize);
-                //     cout << "finish write" << endl;
-                //     // 为什么客户端接受第一次的数据大小是正确的，但是第二次接受的数据就不对了？
-                //     // 因为客户端接受数据的时候，是按照缓冲区大小来接受的，如果缓冲区大小不够，就会出现数据不完整的情况
-
-                //     pg_message.Clear();
-
-                //     cout << "第" << write_count << "次发送，数据大小为: " << pbSize << endl;
-                //     write_count++;
-                // }
+            if (IS_WRITE_FILE) {
+                open3d::io::WritePointCloud("ply/final_cloud.ply", *final_cloud);
+                open3d::io::WriteTriangleMesh("ply/final_mesh.ply", *des_mesh);
             }
-            cout << "======================" << endl;
-            cout << "发送完毕. 一共发送了 " << write_count << " 次" << endl;
-            cout << "面片数量: " << triangles.size() << endl;
-            cout << "======================" << endl;
-            cout << all << endl;
+
+            if (IS_CONNECT_SERVER) {
+                // 定义一个proto消息
+                cas::proto::Mesh mesh_message;
+                // 顶点坐标
+                const vector<Eigen::Vector3d> &vertices = des_mesh->vertices_;
+                // 顶点索引
+                const vector<Eigen::Vector3i> &triangles = des_mesh->triangles_;
+                // 顶点颜色
+                const vector<Eigen::Vector3d> &colors = des_mesh->vertex_colors_;
+
+                int write_count = 0;
+                for (int i = 0; i < triangles.size(); i++) {
+                    cas::proto::V1 *v1 = mesh_message.add_v1();
+                    int v1_index = triangles[i][0];
+                    v1->set_x(vertices[v1_index][0]);
+                    v1->set_y(vertices[v1_index][1]);
+                    v1->set_z(vertices[v1_index][2]);
+
+                    cas::proto::V2 *v2 = mesh_message.add_v2();
+                    int v2_index = triangles[i][1];
+                    v2->set_x(vertices[v2_index][0]);
+                    v2->set_y(vertices[v2_index][1]);
+                    v2->set_z(vertices[v2_index][2]);
+
+                    cas::proto::V3 *v3 = mesh_message.add_v3();
+                    int v3_index = triangles[i][2];
+                    v3->set_x(vertices[v3_index][0]);
+                    v3->set_y(vertices[v3_index][1]);
+                    v3->set_z(vertices[v3_index][2]);
+
+                    mesh_message.add_r((colors[v1_index][0] + colors[v2_index][0] + colors[v3_index][0]) / 3.0);
+                    mesh_message.add_g((colors[v1_index][1] + colors[v2_index][1] + colors[v3_index][1]) / 3.0);
+                    mesh_message.add_b((colors[v1_index][2] + colors[v2_index][2] + colors[v3_index][2]) / 3.0);
+
+                    if ((i + 1) % 800 == 0 || i == triangles.size() - 1) {
+                        // 创建一个内存输出流
+                        std::ostringstream output_stream(std::ios::binary);
+
+                        // 将 pg 对象序列化到内存输出流中
+                        if (!mesh_message.SerializeToOstream(&output_stream)) {
+                            std::cerr << "Failed to serialize pg message" << std::endl;
+                        }
+
+                        // 获取序列化后的数据并发送到网络对端
+                        std::string serialized_data = output_stream.str();
+                        if (write(client_fd, serialized_data.data(), serialized_data.size()) < 0) {
+                            std::cerr << "Failed to send data to the network endpoint" << std::endl;
+                        }
+
+                        mesh_message.Clear();
+                        write_count++;
+                    }
+                }
+                cout << "=============================" << endl;
+                cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
+                cout << "== 面片数量: " << triangles.size() << endl;
+                cout << "=============================" << endl;
+            }
             break;
         }
     }

@@ -1,0 +1,29 @@
+syntax = "proto3";
+package cas.proto;
+
+message Mesh {
+    repeated V1 v1 = 1;
+    repeated V2 v2 = 2;
+    repeated V3 v3 = 3;
+    repeated float r = 4;
+    repeated float g = 5;
+    repeated float b = 6;
+}
+
+message V1{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message V2{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message V3{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
