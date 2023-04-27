@@ -1,5 +1,7 @@
 #include "CasIp.h"
 #include "Mesh.pb.h"
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -54,10 +56,42 @@ int main() {
         cout << "IP地址: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
     };
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    string c = "EXIT";
+    send(client_fd, c.c_str(), c.length(), 0);
+
+    int fd_arm;
+
+    unsigned char tempbuff[1024]; /*临时缓存*/
+    unsigned char databuff[18];
+
+    int recv_long = 0;
+
+
     while (true) {
-        char c = getchar();
-        cout << "send" << endl;
-        write(client_fd, &c, 1);
+        // string c ;
+        // cin >> c;
+        // //发送字符串
+        // send(client_fd, c.c_str(), c.length(), 0);
+
+
+        //接收服务器消息：
+        cout << "接收服务器消息：" << endl;
+        memset(tempbuff, 0, sizeof(tempbuff));
+        memset(databuff, 0, sizeof(databuff));
+        recv_long = recv(client_fd, tempbuff, sizeof(tempbuff), 0);
+        if (recv_long > 0) {
+            memcpy(databuff, tempbuff, recv_long);
+            cout << "接收到的数据长度：" << recv_long << endl;
+            cout << "接收到的数据：" << databuff << endl;
+        } else {
+            cout << "接收到的数据长度：" << recv_long << endl;
+            cout << "接收到的数据：" << databuff << endl;
+        }
+        
+        // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
     }
 
     return 0;

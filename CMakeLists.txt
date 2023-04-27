@@ -35,11 +35,11 @@ add_executable(AcquiringPointCloud
         src/Mesh.pb.cc
         )
 
-# add_executable(TcpTest
-#         src/TcpTest.cpp
-#         src/CasIp.cpp
-#         src/Mesh.pb.cc
-#         )
+add_executable(TcpTest
+        src/TcpTest.cpp
+        src/CasIp.cpp
+        src/Mesh.pb.cc
+        )
 
 # 指定头文件目录
 include_directories(include)
@@ -50,6 +50,11 @@ target_link_libraries(AcquiringPointCloud
         ${Eigen3_LIBRARIES}
         ${Protobuf_LIBRARIES}
         )
+
+target_link_libraries(TcpTest
+        ${Protobuf_LIBRARIES}
+        )
+
 
 
 #### CasGeneratePointCloud ####

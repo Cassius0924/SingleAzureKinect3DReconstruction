@@ -1,11 +1,13 @@
+//
+// Created by Cassius0924 on 2020/03/03.
+//
+
 /*
  * SingleAzureKinect3DReconstruction
  * 此项目基于 Open3D 和 Azure Kinect DK 实现了三维重建。利用 Azure Kinect DK
  * 捕获图像并记录 IMU 数据，利用 Open3D 实现三维重建。
- *
- * Created by Cassius0924 on 2020/03/03.
- * 
  */
+
 
 #include "CasAzureKinectExtrinsics.h"
 #include "CasBot.h"
@@ -38,7 +40,7 @@
 
 using namespace std;
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     // 读取配置文件
     cas::CasConfig cas_config("../default.conf");
 
@@ -68,7 +70,7 @@ int main(int argc, char **argv) {
         if (1 != device_count) {// 超过1个设备，也输出错误信息。
             cout << "Error: more than one K4A devices found. " << endl;
             return -1;
-        } else {// 该示例代码仅限对1个设备操作
+        } else {
             cout << "Done: found 1 K4A device. " << endl;
         }
     }
@@ -172,6 +174,7 @@ int main(int argc, char **argv) {
 
     int camera_task_count = 0;
     int cloud_task_count = 0;
+    bool arm_finished = false;
 
     cas::EulerAngle cur_angle(0, 0, 0);
 
@@ -243,6 +246,10 @@ int main(int argc, char **argv) {
     } else {
         cout << "客户端IP: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
     };
+
+    // if (write(client_fd, "<<HELLO, I AM SERVER>>", 24) >= 0) {
+    //     cout << "发送握手消息成功" << endl;
+    // }
 
     // 定义相机线程
     thread camera_thread([&]() {
@@ -340,9 +347,9 @@ int main(int argc, char **argv) {
             Eigen::Matrix3d rotation_matrix;
             rotation_matrix << cas::eulerAngle2RotationMatrix(image_data.angle);
 
-            if (VOXEL_SIZE > 0) {
-                cloud = cloud->VoxelDownSample(VOXEL_SIZE);
-            }
+            // if (VOXEL_SIZE > 0) {
+            cloud = cloud->VoxelDownSample(VOXEL_SIZE);
+            // }
 
             if (flag == 0) {
                 flag = 1;
@@ -351,7 +358,7 @@ int main(int argc, char **argv) {
                 Eigen::Vector3d center = Eigen::Vector3d::Zero();
                 cloud->Rotate(rotation_matrix, center);
 
-                //精配准: 基于彩色 ICP 算法
+                //精配准: 基于彩色 ICP 算法。
                 final_cloud->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(VOXEL_SIZE * 2, 30));//法向量估计
                 cloud->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(VOXEL_SIZE * 2, 30));
                 Eigen::Matrix4d transformation_icp = Eigen::Matrix4d::Identity();
@@ -375,10 +382,11 @@ int main(int argc, char **argv) {
     // 机械臂线程
     thread arm_thread([&]() {
         while (true) {
-            unique_lock<mutex> lock(arm_mutex);
+            // unique_lock<mutex> lock(arm_mutex);
 
             // 等待接受到机械臂的数据
             recv_long = recv(client_fd, tempbuff, 1024, 0);
+            cout << "recv_long: " << recv_long << endl;
 
             memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入databuff中
 
@@ -424,7 +432,7 @@ int main(int argc, char **argv) {
 
         // 如果旋转角度大于π，就退出
         if (abs(prev_angle.yaw) > EXIT_RADIAN) {
-            cout << "旋转角度大于π，退出" << endl;
+            cout << "旋转角度大于" << EXIT_RADIAN << "，退出" << endl;
             ready_to_break = true;
 
             cout << "等待线程结束..." << endl;
@@ -525,19 +533,24 @@ int main(int argc, char **argv) {
                 cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
                 cout << "== 面片数量: " << triangles.size() << endl;
                 cout << "===============================" << endl;
-                break;
             }
-            // 发送结束标志，0长度的字符串
-            write(client_fd, "", 0);
-            cout << "发送结束标志" << endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            string exit_str = "EXIT";
+            if (send(client_fd, exit_str.c_str(), exit_str.length(), 0) > 0) {
+                cout << "发送结束标志: EXIT" << endl;
+            }
             break;
         }
     }
 
-    // while (true) {
-    //     cout << "DEBUG: 等待..." << endl;
-    //     char c = getchar();
-    // }
+    {
+        unique_lock<mutex> lock(arm_mutex);
+
+        while (arm_finished == false) {
+            arm_cv.wait(lock);
+        }
+    }
+
 
     // 断开连接
     close(client_fd);
