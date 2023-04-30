@@ -8,7 +8,6 @@
  * 捕获图像并记录 IMU 数据，利用 Open3D 实现三维重建。
  */
 
-
 #include "CasAzureKinectExtrinsics.h"
 #include "CasBot.h"
 #include "CasConfig.h"
@@ -27,16 +26,6 @@
 
 // Open3D
 #include <open3d/Open3D.h>
-
-// #define INTERVAL_RADIAN 0.4
-// #define EXIT_RADIAN 3.2
-// #define VOXEL_SIZE 0.05
-// #define FINAL_VOXEL_SIZE 0.01
-// #define SMALL_RADIUS_MULTIPLIER 2
-// #define LARGE_RADIUS_MULTIPLIER 4
-// #define IS_WRITE_FILE false
-// #define IS_CONNECT_SERVER true
-// #define IS_CONNECT_BOT false
 
 using namespace std;
 
@@ -58,26 +47,27 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     string MESH_FILE_PATH = cas_config.get("mesh_file_path");
     bool IS_CONNECT_SERVER = cas_config.get_bool("is_connect_server");
     bool IS_CONNECT_BOT = cas_config.get_bool("is_connect_bot");
+    bool IS_CONNECT_KINECT = cas_config.get_bool("is_connect_kinect");
     int PROTOBUF_SERVER_PORT = cas_config.get_int("protobuf_server_port");
 
     // 发现已连接的设备数
     const uint32_t device_count = k4a::device::get_installed_count();
     if (0 == device_count) {
-        cout << "Error: no K4A devices found. " << endl;
+        cerr << "错误：没有发现 K4A 设备。" << endl;
         return -1;
     } else {
-        cout << "Found " << device_count << " connected devices. " << endl;
+        cout << "发现 " << device_count << " 个已连接的设备。" << endl;
         if (1 != device_count) {// 超过1个设备，也输出错误信息。
-            cout << "Error: more than one K4A devices found. " << endl;
+            cerr << "错误：发现多个 K4A 设备。" << endl;
             return -1;
         } else {
-            cout << "Done: found 1 K4A device. " << endl;
+            cout << "发现 1 个 K4A 设备。" << endl;
         }
     }
 
     // 打开（默认）设备
     k4a::device device = k4a::device::open(K4A_DEVICE_DEFAULT);
-    cout << "Done: open device. " << endl;
+    cout << "打开设备。" << endl;
 
     // 配置并启动设备
     k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
@@ -85,9 +75,9 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
     config.color_resolution = K4A_COLOR_RESOLUTION_720P;
     config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-    config.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
+    config.synchronized_images_only = true;     //只输出同步的图像，即同步深度图和彩色图
     device.start_cameras(&config);
-    cout << "Done: start camera." << endl;
+    cout << "开启相机。" << endl;
 
     // 稳定化
     k4a::capture capture;
@@ -95,28 +85,28 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     int i_auto_error = 0;// 统计自动曝光的失败次数
     while (true) {
         if (device.get_capture(&capture)) {
-            cout << i_auto << ". Capture several frames to give auto-exposure" << endl;
+            cout << i_auto << "稳定相机，用来自动曝光" << endl;
             // 跳过前 n 个（成功的数据采集）循环，用来稳定
             if (i_auto != 30) {
                 i_auto++;
                 continue;
             } else {
-                cout << "Done: auto-exposure" << endl;
+                cout << "自动曝光完成" << endl;
                 break;// 跳出该循环，完成相机的稳定过程
             }
         } else {
-            cout << i_auto_error << ". K4A_WAIT_RESULT_TIMEOUT." << endl;
+            cout << i_auto_error << "自动曝光失败" << endl;
             if (i_auto_error != 30) {
                 i_auto_error++;
                 continue;
             } else {
-                cout << "Error: failed to give auto-exposure. " << endl;
+                cerr << "错误：无法自动曝光。" << endl;
                 return -1;
             }
         }
     }
     cout << "-----------------------------------" << endl;
-    cout << "----- Have Started Kinect DK. -----" << endl;
+    cout << "----- 成功启动 Azure Kinect DK -----" << endl;
     cout << "-----------------------------------" << endl;
 
     // 从设备获取捕获
@@ -135,15 +125,6 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
     // 创建容器用于保存ImageData
     vector<ImageData> image_data_vector;
-
-    // 先创建个WebSocket对象
-    // // WebSocket webSocket("ws://39.108.216.190/ws");
-    // //连接服务器
-    // if (webSocket.connect()) {
-    //    cout << "connect success" << endl;
-    // } else {
-    //    cout << "connect failed" << endl;
-    // }
 
     // 启动 IMU
     k4a_imu_sample_t imu_sample;
@@ -181,6 +162,7 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     int fd_car, fd_arm;
     unsigned char tempbuff[1024]; /*临时缓存*/
     unsigned char databuff[18];
+    unsigned char grib_databuff[7];
     int recv_long = 0;
 
     // ====机械臂====
@@ -247,10 +229,6 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
         cout << "客户端IP: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
     };
 
-    // if (write(client_fd, "<<HELLO, I AM SERVER>>", 24) >= 0) {
-    //     cout << "发送握手消息成功" << endl;
-    // }
-
     // 定义相机线程
     thread camera_thread([&]() {
         while (true) {
@@ -263,7 +241,6 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
             }
 
             ImageData image_data;
-
             device.get_capture(&capture);
 
             // 存入结构体
@@ -386,14 +363,14 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
             // 等待接受到机械臂的数据
             recv_long = recv(client_fd, tempbuff, 1024, 0);
-            cout << "recv_long: " << recv_long << endl;
 
             memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入databuff中
 
-            for (int j = 0; j < recv_long; j++) {
-                cout << hex << (int) databuff[j] << " ";
-            }
-            cout << endl;
+            // for (int j = 0; j < recv_long; j++) {
+            //     cout << hex << (int) databuff[j] << " ";
+            // }
+            // cout << endl;
+            // cout << "接收到机械臂数据" << endl;
 
             // 发送数据给机械臂
             write(fd_arm, databuff, recv_long);
@@ -545,9 +522,31 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
     {
         unique_lock<mutex> lock(arm_mutex);
+        bool arm_grib = false;
+
+        grib_databuff[0] = 0xFE;
+        grib_databuff[1] = 0xFE;
+        grib_databuff[2] = 0x04;
+        grib_databuff[3] = 0x66;
+        //
+        grib_databuff[5] = 0x32;
+        grib_databuff[6] = 0xFA;
 
         while (arm_finished == false) {
-            arm_cv.wait(lock);
+            //控制机械臂夹爪
+            cout << "请输入 0 或 1 控制机械臂夹爪:";
+            char c = getchar();
+            if (c == '1') {
+                grib_databuff[4] = 0x00;
+            } else if (c == '0') {
+                grib_databuff[4] = 0x01;
+            }
+
+            // 发送数据给机械臂
+            if (write(fd_arm, grib_databuff, 7) > 0) {
+                cout << "发送数据给机械臂" << endl;
+            }
+            // arm_cv.wait(lock);
         }
     }
 
