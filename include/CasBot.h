@@ -1,4 +1,5 @@
-#define _MYCOBOT_MAIN_H_
+#ifndef _MYCOBOT_H_
+#define _MYCOBOT_H_
 
 #include "fcntl.h"
 #include "pthread.h"
@@ -36,3 +37,5 @@ namespace cas {
         int resetCobot(int fd); /*f复位机械臂*/
     }                           // namespace bot
 }// namespace cas
+
+#endif //_MYCOBOT_MAIN_H_

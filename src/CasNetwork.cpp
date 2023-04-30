@@ -1,4 +1,4 @@
-#include "CasIp.h"
+#include "CasNetwork.h"
 // #include "polygon.pb.h"
 
 using namespace std;
@@ -8,7 +8,7 @@ using namespace std;
  * 参数：IP地址的存储地址（char*类型）
  * 返回值：获取成功返回0
 */
-bool cas::CasIp::get_local_ip(char *ip) {
+bool cas::net::getLocalIp(char *ip) {
     int fd, intrface, retn = 0;                    //fd是用户程序打开设备时使用open函数返回的文件标示符
     struct ifreq buf[INET_ADDRSTRLEN];             //INET_ADDRSTRLEN 宏定义，16
     struct ifconf ifc;                             //ifconf > ifreq
@@ -39,6 +39,59 @@ bool cas::CasIp::get_local_ip(char *ip) {
     }
     cout << "获取本地IP地址失败" << endl;
     return false;
+}
+
+int cas::net::creatServerSocket(int port) {
+    int server_socket_fd = -1;
+    int client_fd = -1;
+    struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
+    socklen_t addr_len = (socklen_t) sizeof(*addr);
+    memset(addr, 0, sizeof(*addr));
+
+    struct sockaddr_in sockaddr;
+    memset(&sockaddr, 0, sizeof(sockaddr));
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_port = htons(port);    //端口号
+
+    char ip_local[32 + 1] = {0};
+    if (!cas::net::getLocalIp(ip_local)) {
+        cout << "连接IP失败: " << ip_local << endl;
+        return -1;
+    }
+    inet_aton(ip_local, &sockaddr.sin_addr);//将一个字符串IP地址转换为一个32位的网络序列IP地址
+
+    server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);//创建套接字
+    if (server_socket_fd < 0) {
+        cerr << "Socket 创建失败" << endl;
+        return -1;
+    }
+
+    if (bind(server_socket_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) != 0) {//绑定套接字
+        cerr << "Socket 绑定失败" << endl;
+        close(server_socket_fd);
+        return -1;
+    }
+    if (listen(server_socket_fd, 1) != 0) {//监听套接字
+        cerr << "Socket 监听失败" << endl;
+        close(server_socket_fd);
+        return -1;
+    }
+
+    cout << "等待客户端连接..." << endl;
+
+    client_fd = accept(server_socket_fd, (struct sockaddr *) addr, &addr_len);
+    cout << "客户端连接成功" << endl;
+
+    if (client_fd < 0) {
+        cerr << "Socket 接收失败" << endl;
+        close(server_socket_fd);
+        free(addr);
+        return -1;
+    } else {
+        cout << "客户端IP: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
+    };
+
+    return client_fd;
 }
 
 

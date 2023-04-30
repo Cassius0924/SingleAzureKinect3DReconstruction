@@ -1,4 +1,4 @@
-#include "CasIp.h"
+#include "CasNetwork.h"
 #include "Mesh.pb.h"
 #include <chrono>
 #include <thread>
@@ -17,9 +17,8 @@ int main() {
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(5001);
 
-    cas::CasIp cas_ip;
     char ip_local[32 + 1] = {0};
-    if (!cas_ip.get_local_ip(ip_local)) {
+    if (!cas::net::getLocalIp(ip_local)) {
         cout << "连接IP失败: " << ip_local << endl;
         return -1;
     }

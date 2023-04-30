@@ -8,10 +8,11 @@
  * 捕获图像并记录 IMU 数据，利用 Open3D 实现三维重建。
  */
 
+#include "CasAzureKinect.h"
 #include "CasAzureKinectExtrinsics.h"
 #include "CasBot.h"
 #include "CasConfig.h"
-#include "CasIp.h"
+#include "CasNetwork.h"
 #include "Mesh.pb.h"
 
 // #include "CasWebSocket.h"
@@ -45,24 +46,15 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     bool IS_WRITE_FILE = cas_config.get_bool("is_write_file");
     string CLOUD_FILE_PATH = cas_config.get("cloud_file_path");
     string MESH_FILE_PATH = cas_config.get("mesh_file_path");
-    bool IS_CONNECT_SERVER = cas_config.get_bool("is_connect_server");
+    bool IS_CREATE_SERVER = cas_config.get_bool("is_create_server");
     bool IS_CONNECT_BOT = cas_config.get_bool("is_connect_bot");
     bool IS_CONNECT_KINECT = cas_config.get_bool("is_connect_kinect");
+    bool IS_START_SOUND_SOURCE_LOCALIZATION = cas_config.get_bool("is_start_sound_source_localization");
     int PROTOBUF_SERVER_PORT = cas_config.get_int("protobuf_server_port");
 
     // 发现已连接的设备数
-    const uint32_t device_count = k4a::device::get_installed_count();
-    if (0 == device_count) {
-        cerr << "错误：没有发现 K4A 设备。" << endl;
-        return -1;
-    } else {
-        cout << "发现 " << device_count << " 个已连接的设备。" << endl;
-        if (1 != device_count) {// 超过1个设备，也输出错误信息。
-            cerr << "错误：发现多个 K4A 设备。" << endl;
-            return -1;
-        } else {
-            cout << "发现 1 个 K4A 设备。" << endl;
-        }
+    if (cas::kinect::checkKinectNum(1) == false) {
+        return 1;
     }
 
     // 打开（默认）设备
@@ -80,34 +72,36 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     cout << "开启相机。" << endl;
 
     // 稳定化
+    cas::kinect::stabilizeCamera(device);
     k4a::capture capture;
-    int i_auto = 0;      // 用来稳定，类似自动曝光
-    int i_auto_error = 0;// 统计自动曝光的失败次数
-    while (true) {
-        if (device.get_capture(&capture)) {
-            cout << i_auto << "稳定相机，用来自动曝光" << endl;
-            // 跳过前 n 个（成功的数据采集）循环，用来稳定
-            if (i_auto != 30) {
-                i_auto++;
-                continue;
-            } else {
-                cout << "自动曝光完成" << endl;
-                break;// 跳出该循环，完成相机的稳定过程
-            }
-        } else {
-            cerr << i_auto_error << "自动曝光失败" << endl;
-            if (i_auto_error != 30) {
-                i_auto_error++;
-                continue;
-            } else {
-                cerr << "错误：无法自动曝光。" << endl;
-                return -1;
-            }
+    cout << "------------------------------------" << endl;
+    cout << "----- 成功启动 Azure Kinect DK -----" << endl;
+    cout << "------------------------------------" << endl;
+
+
+    int arm_fd;
+    unsigned char tempbuff[1024]; /*临时缓存*/
+    unsigned char databuff[18];
+    unsigned char gripper_databuff[7];
+    int recv_long = 0;
+
+    if (IS_CONNECT_BOT) {
+        if ((arm_fd = cas::bot::armInit()) < 0) {
+            cerr << "机械臂设备初始化失败" << endl;
+            return -1;
+        }
+        cas::bot::resetCobot(arm_fd);
+        cout << "机械臂复位成功" << endl;
+    }
+
+    int client_fd = -1;
+    if (IS_CREATE_SERVER) {
+        client_fd = cas::net::creatServerSocket(PROTOBUF_SERVER_PORT);
+        if (client_fd < 0) {
+            cerr << "创建服务器失败" << endl;
+            return -1;
         }
     }
-    cout << "-----------------------------------" << endl;
-    cout << "----- 成功启动 Azure Kinect DK -----" << endl;
-    cout << "-----------------------------------" << endl;
 
     // 从设备获取捕获
     k4a::image rgb_image;
@@ -158,75 +152,6 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     bool arm_finished = false;
 
     cas::EulerAngle cur_angle(0, 0, 0);
-
-    int fd_car, fd_arm;
-    unsigned char tempbuff[1024]; /*临时缓存*/
-    unsigned char databuff[18];
-    unsigned char gripper_databuff[7];
-    int recv_long = 0;
-
-    // ====机械臂====
-    if (IS_CONNECT_BOT) {
-        if ((fd_arm = cas::bot::armInit()) < 0) {
-            cerr << "机械臂设备初始化失败" << endl;
-            return -1;
-        }
-        cas::bot::resetCobot(fd_arm);
-        cout << "机械臂复位成功" << endl;
-    }
-
-    // ============
-
-    int server_socket_fd = -1;
-    int client_fd = -1;
-    struct sockaddr_in *addr = (struct sockaddr_in *) malloc(sizeof(struct sockaddr_in));
-    socklen_t addr_len = (socklen_t) sizeof(*addr);
-    memset(addr, 0, sizeof(*addr));
-
-    struct sockaddr_in sockaddr;
-    memset(&sockaddr, 0, sizeof(sockaddr));
-    sockaddr.sin_family = AF_INET;
-    sockaddr.sin_port = htons(PROTOBUF_SERVER_PORT);
-
-    cas::CasIp cas_ip;
-    char ip_local[32 + 1] = {0};
-    if (!cas_ip.get_local_ip(ip_local)) {
-        cout << "连接IP失败: " << ip_local << endl;
-        return -1;
-    }
-    inet_aton(ip_local, &sockaddr.sin_addr);
-
-    server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket_fd < 0) {
-        cerr << "Socket 创建失败" << endl;
-        return -1;
-    }
-
-    if (bind(server_socket_fd, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) != 0) {
-        cerr << "Socket 绑定失败" << endl;
-        close(server_socket_fd);
-        return -1;
-    }
-    if (listen(server_socket_fd, 1) != 0) {
-        cerr << "Socket 监听失败" << endl;
-        close(server_socket_fd);
-        return -1;
-    }
-
-    //等待客户端连接
-    cout << "等待客户端连接..." << endl;
-
-    client_fd = accept(server_socket_fd, (struct sockaddr *) addr, &addr_len);
-    cout << "客户端连接成功" << endl;
-
-    if (client_fd < 0) {
-        cerr << "Socket 接收失败" << endl;
-        close(server_socket_fd);
-        free(addr);
-        return -1;
-    } else {
-        cout << "客户端IP: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
-    };
 
     // 定义相机线程
     thread camera_thread([&]() {
@@ -363,9 +288,9 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
             // 等待接受到机械臂的数据
             recv_long = recv(client_fd, tempbuff, 1024, 0);
 
-            memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入databuff中
+            memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入 databuff 中
 
-            write(fd_arm, databuff, recv_long);
+            write(arm_fd, databuff, recv_long);
         }
     });
 
@@ -445,7 +370,7 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
                 open3d::io::WriteTriangleMesh(MESH_FILE_PATH, *des_mesh);
             }
 
-            if (IS_CONNECT_SERVER) {
+            if (IS_CREATE_SERVER) {
                 // 定义一个proto消息
                 cas::proto::Mesh mesh_message;
                 // 顶点坐标
@@ -535,7 +460,7 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
             }
 
             // 发送数据给机械臂
-            if (write(fd_arm, gripper_databuff, 7) > 0) {
+            if (write(arm_fd, gripper_databuff, 7) > 0) {
                 cout << "发送数据给机械臂" << endl;
             }
             // arm_cv.wait(lock);

@@ -29,16 +29,22 @@ include_directories("/usr/local/include/open3d")
 add_executable(AcquiringPointCloud 
         src/AcquiringPointCloud.cpp 
         src/CasAzureKinectExtrinsics.cpp 
+        src/CasAzureKinect.cpp 
         src/CasConfig.cpp
         src/CasBot.cpp
-        src/CasIp.cpp
+        src/CasNetwork.cpp
         src/Mesh.pb.cc
         )
 
 add_executable(TcpTest
         src/TcpTest.cpp
-        src/CasIp.cpp
+        src/CasNetwork.cpp
         src/Mesh.pb.cc
+        )
+
+add_executable(soundTest
+        src/soundTest.cpp
+        src/CasAzureKinect.cpp
         )
 
 # 指定头文件目录
@@ -49,11 +55,18 @@ target_link_libraries(AcquiringPointCloud
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}
         ${Protobuf_LIBRARIES}
+        asound
         )
 
 target_link_libraries(TcpTest
         ${Protobuf_LIBRARIES}
         )
+
+target_link_libraries(soundTest PRIVATE
+        k4a::k4a
+        asound
+        )
+
 
 
 
@@ -238,19 +251,3 @@ target_link_libraries(TcpTest
 #        ${Open3D_LIBRARIES}
 #        )
 #
-
-#### Open3DTest ####
-
-# 保持注释，Open3D测试用
-
-#SET(this_target Open3DTest)
-#
-#find_package(Open3D HINTS REQUIRED)
-##set(Open3D_INCLUDE_DIRS "/usr/local/include")
-#include_directories(${Open3D_INCLUDE_DIRS})
-#include_directories(/usr/local/include/open3d/3rdparty)
-#link_directories(${Open3D_LIBRARY_DIRS})
-#
-#add_executable(Open3DTest Open3DTest.cpp)
-#
-#target_link_libraries(Open3DTest ${Open3D_LIBRARIES})

@@ -2,12 +2,12 @@
 // Created by HoChihChou on 4/7/23.
 //
 
-#ifndef SMALL_AZURE_KINECT_DK_3D_RECONSTRUCTION_CASAZUREKINECTEXTRINSICS_H
-#define SMALL_AZURE_KINECT_DK_3D_RECONSTRUCTION_CASAZUREKINECTEXTRINSICS_H
+#ifndef _CASAZUREKINECTEXTRINSICS_H_
+#define _CASAZUREKINECTEXTRINSICS_H_
 
 //导入Kinect库
-#include <k4a/k4a.hpp>
 #include <k4a/k4a.h>
+#include <k4a/k4a.hpp>
 
 #include <Eigen/Core>
 
@@ -16,9 +16,9 @@ using namespace std;
 //打开 Azure Kinect 设备
 namespace cas {
     // C++:
-//    k4a::device openAzureKinectDevice();
+    //    k4a::device openAzureKinectDevice();
     bool openAzureKinectDevice(k4a_device_t *device);
-    
+
     //void configureAzureKinectDevice(k4a::device &device, k4a_device_configuration_t config);
     bool configureAzureKinectDevice(k4a_device_t device, k4a_device_configuration_t config);
 
@@ -36,16 +36,16 @@ namespace cas {
 
     class EulerAngle {
     public:
-        double roll, pitch, yaw; //横滚角，俯仰角，偏航角，单位弧度
-        EulerAngle(double r = 0, double p = 0, double y = 0); //构造函数
+        double roll, pitch, yaw;                             //横滚角，俯仰角，偏航角，单位弧度
+        EulerAngle(double r = 0, double p = 0, double y = 0);//构造函数
     };
 
     // 计算角度
-    EulerAngle calculateOrientation(double gx, double gy, double gz, double dt, const EulerAngle& prevAngle);
+    EulerAngle calculateOrientation(double gx, double gy, double gz, double dt, const EulerAngle &prevAngle);
 
     // 角度转旋转矩阵
-    Eigen::Matrix3d eulerAngle2RotationMatrix(const EulerAngle& angle);
-}
+    Eigen::Matrix3d eulerAngle2RotationMatrix(const EulerAngle &angle);
+}// namespace cas
 
 
-#endif //SMALL_AZURE_KINECT_DK_3D_RECONSTRUCTION_CASAZUREKINECTEXTRINSICS_H
+#endif//_CASAZUREKINECTEXTRINSICS_H_

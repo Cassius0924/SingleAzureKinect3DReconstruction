@@ -1,5 +1,5 @@
-#ifndef CASIP_H
-#define CASIP_H
+#ifndef CASNETWORK_H
+#define CASNETWORK_H
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -11,10 +11,11 @@
 #include <unistd.h>
 
 namespace cas {
-    class CasIp {
-    public:
-        bool get_local_ip(char *ip);
-    };
+    namespace net {
+        bool getLocalIp(char *ip);
+
+        int creatServerSocket(int port);
+    };// namespace net
 }// namespace cas
 
-#endif//CASIP_H
+#endif//CASNETWORK_H
