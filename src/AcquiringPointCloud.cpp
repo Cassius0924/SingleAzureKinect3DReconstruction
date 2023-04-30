@@ -75,7 +75,7 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
     config.color_resolution = K4A_COLOR_RESOLUTION_720P;
     config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-    config.synchronized_images_only = true;     //只输出同步的图像，即同步深度图和彩色图
+    config.synchronized_images_only = true;//只输出同步的图像，即同步深度图和彩色图
     device.start_cameras(&config);
     cout << "开启相机。" << endl;
 
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
                 break;// 跳出该循环，完成相机的稳定过程
             }
         } else {
-            cout << i_auto_error << "自动曝光失败" << endl;
+            cerr << i_auto_error << "自动曝光失败" << endl;
             if (i_auto_error != 30) {
                 i_auto_error++;
                 continue;
@@ -162,19 +162,18 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     int fd_car, fd_arm;
     unsigned char tempbuff[1024]; /*临时缓存*/
     unsigned char databuff[18];
-    unsigned char grib_databuff[7];
+    unsigned char gripper_databuff[7];
     int recv_long = 0;
 
     // ====机械臂====
     if (IS_CONNECT_BOT) {
-        if ((fd_arm = mysys_arm_init()) < 0) {
-            cout << "机械臂设备初始化失败" << endl;
+        if ((fd_arm = cas::bot::armInit()) < 0) {
+            cerr << "机械臂设备初始化失败" << endl;
             return -1;
         }
-        mysys_resetMycobot(fd_arm);
+        cas::bot::resetCobot(fd_arm);
         cout << "机械臂复位成功" << endl;
     }
-
 
     // ============
 
@@ -366,13 +365,6 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
             memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入databuff中
 
-            // for (int j = 0; j < recv_long; j++) {
-            //     cout << hex << (int) databuff[j] << " ";
-            // }
-            // cout << endl;
-            // cout << "接收到机械臂数据" << endl;
-
-            // 发送数据给机械臂
             write(fd_arm, databuff, recv_long);
         }
     });
@@ -522,28 +514,28 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
     {
         unique_lock<mutex> lock(arm_mutex);
-        bool arm_grib = false;
+        bool arm_gripper = false;
 
-        grib_databuff[0] = 0xFE;
-        grib_databuff[1] = 0xFE;
-        grib_databuff[2] = 0x04;
-        grib_databuff[3] = 0x66;
-        //
-        grib_databuff[5] = 0x32;
-        grib_databuff[6] = 0xFA;
+        gripper_databuff[0] = 0xFE;
+        gripper_databuff[1] = 0xFE;
+        gripper_databuff[2] = 0x04;
+        gripper_databuff[3] = 0x66;
+        //[5]
+        gripper_databuff[5] = 0x32;
+        gripper_databuff[6] = 0xFA;
 
         while (arm_finished == false) {
             //控制机械臂夹爪
             cout << "请输入 0 或 1 控制机械臂夹爪:";
             char c = getchar();
             if (c == '1') {
-                grib_databuff[4] = 0x00;
+                gripper_databuff[4] = 0x00;
             } else if (c == '0') {
-                grib_databuff[4] = 0x01;
+                gripper_databuff[4] = 0x01;
             }
 
             // 发送数据给机械臂
-            if (write(fd_arm, grib_databuff, 7) > 0) {
+            if (write(fd_arm, gripper_databuff, 7) > 0) {
                 cout << "发送数据给机械臂" << endl;
             }
             // arm_cv.wait(lock);
