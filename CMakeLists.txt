@@ -26,6 +26,7 @@ link_directories(${Protobuf_LIBRARY_DIRS})
 find_package(Open3D REQUIRED)
 include_directories("/usr/local/include/open3d")
 
+
 add_executable(AcquiringPointCloud 
         src/AcquiringPointCloud.cpp 
         src/CasAzureKinectExtrinsics.cpp 
@@ -56,6 +57,7 @@ target_link_libraries(AcquiringPointCloud
         ${Eigen3_LIBRARIES}
         ${Protobuf_LIBRARIES}
         asound
+        fftw3
         )
 
 target_link_libraries(TcpTest
@@ -65,6 +67,8 @@ target_link_libraries(TcpTest
 target_link_libraries(soundTest PRIVATE
         k4a::k4a
         asound
+        ${Eigen3_LIBRARIES}
+        fftw3
         )
 
 
