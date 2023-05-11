@@ -1,0 +1,8 @@
+syntax = "proto3";
+package cas.proto;
+
+// 底盘车
+message BotCar {
+    repeated int32 move_sequence = 1;
+    // [10, -1, 4, -2]  正数：前进的时间；负数：旋转角度，-1左转，-2右转
+}

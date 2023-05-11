@@ -1,0 +1,8 @@
+syntax = "proto3";
+package cas.proto;
+
+message SoundSource {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}

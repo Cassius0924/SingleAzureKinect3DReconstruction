@@ -13,7 +13,10 @@
 #include "CasBot.h"
 #include "CasConfig.h"
 #include "CasNetwork.h"
-#include "Mesh.pb.h"
+#include "CasSoundSourceLocalization.h"
+// #include "Mesh.pb.h"
+// #include "SoundSource.pb.h"
+#include "DataMessage.pb.h"
 
 // #include "CasWebSocket.h"
 
@@ -32,29 +35,35 @@ using namespace std;
 
 int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     // 读取配置文件
-    cas::CasConfig cas_config("../default.conf");
+    cas::CasConfig program_config("../default.conf");
 
-    float INTERVAL_RADIAN = cas_config.get_float("interval_radian");
-    float EXIT_RADIAN = cas_config.get_float("exit_radian");
-    float VOXEL_SIZE = cas_config.get_float("voxel_size");
-    float FINAL_VOXEL_SIZE = cas_config.get_float("final_voxel_size");
-    float SMALL_RADIUS_MULTIPLIER = cas_config.get_float("small_radius_multiplier");
-    float LARGE_RADIUS_MULTIPLIER = cas_config.get_float("large_radius_multiplier");
-    string WEB_SOCKET_SERVER_ADDRESS = cas_config.get("web_socket_server_address");
-    int WEB_SOCKET_SERVER_PORT = cas_config.get_int("web_socket_server_port");
-    string WEB_SOCKET_SERVER_PATH = cas_config.get("web_socket_server_path");
-    bool IS_WRITE_FILE = cas_config.get_bool("is_write_file");
-    string CLOUD_FILE_PATH = cas_config.get("cloud_file_path");
-    string MESH_FILE_PATH = cas_config.get("mesh_file_path");
-    bool IS_CREATE_SERVER = cas_config.get_bool("is_create_server");
-    bool IS_CONNECT_BOT = cas_config.get_bool("is_connect_bot");
-    bool IS_CONNECT_KINECT = cas_config.get_bool("is_connect_kinect");
-    bool IS_START_SOUND_SOURCE_LOCALIZATION = cas_config.get_bool("is_start_sound_source_localization");
-    int PROTOBUF_SERVER_PORT = cas_config.get_int("protobuf_server_port");
+    float INTERVAL_RADIAN = program_config.get_float("interval_radian");
+    float EXIT_RADIAN = program_config.get_float("exit_radian");
+    float VOXEL_SIZE = program_config.get_float("voxel_size");
+    float FINAL_VOXEL_SIZE = program_config.get_float("final_voxel_size");
+    float SMALL_RADIUS_MULTIPLIER = program_config.get_float("small_radius_multiplier");
+    float LARGE_RADIUS_MULTIPLIER = program_config.get_float("large_radius_multiplier");
+    string WEB_SOCKET_SERVER_ADDRESS = program_config.get("web_socket_server_address");
+    int WEB_SOCKET_SERVER_PORT = program_config.get_int("web_socket_server_port");
+    string WEB_SOCKET_SERVER_PATH = program_config.get("web_socket_server_path");
+    bool IS_WRITE_FILE = program_config.get_bool("is_write_file");
+    string CLOUD_FILE_PATH = program_config.get("cloud_file_path");
+    string MESH_FILE_PATH = program_config.get("mesh_file_path");
+    bool IS_CREATE_SERVER = program_config.get_bool("is_create_server");
+    bool IS_CONNECT_BOT = program_config.get_bool("is_connect_bot");
+    bool IS_CONNECT_KINECT = program_config.get_bool("is_connect_kinect");
+    bool ENABLE_SOUND_SOURCE_LOCALIZATION = program_config.get_bool("enable_sound_source_localization");
+    int PROTOBUF_SERVER_PORT = program_config.get_int("protobuf_server_port");
+    unsigned int SAMPLE_RATE = program_config.get_int("sample_rate");
+    int SAMPLES = program_config.get_int("samples");
+    int CHANNELS = program_config.get_int("channels");
+    string MICROPHONE_NAME = program_config.get("microphone_name");
+    string BOT_ARM_SERIAL_PORT_NAME = program_config.get("bot_arm_serial_prot_name");
+    string STM32_SERIAL_PORT_NAME = program_config.get("stm32_serial_prot_name");
 
     // 发现已连接的设备数
     if (cas::kinect::checkKinectNum(1) == false) {
-        return 1;
+        return 0;
     }
 
     // 打开（默认）设备
@@ -86,7 +95,7 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
     int recv_long = 0;
 
     if (IS_CONNECT_BOT) {
-        if ((arm_fd = cas::bot::armInit()) < 0) {
+        if ((arm_fd = cas::bot::initArm(BOT_ARM_SERIAL_PORT_NAME)) < 0) {
             cerr << "机械臂设备初始化失败" << endl;
             return -1;
         }
@@ -266,7 +275,12 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
                 float relative_fitness = 1e-6;
                 float relative_rmse = 1e-6;
                 int max_iteration = 30;
-                auto result_icp = open3d::pipelines::registration::RegistrationICP(*cloud, *final_cloud, VOXEL_SIZE * 2, transformation_icp, open3d::pipelines::registration::TransformationEstimationPointToPlane(), open3d::pipelines::registration::ICPConvergenceCriteria(relative_fitness, relative_rmse, max_iteration));
+                auto result_icp = open3d::pipelines::registration::RegistrationICP(*cloud,
+                                                                                   *final_cloud,
+                                                                                   VOXEL_SIZE * 2,
+                                                                                   transformation_icp,
+                                                                                   open3d::pipelines::registration::TransformationEstimationPointToPlane(),
+                                                                                   open3d::pipelines::registration::ICPConvergenceCriteria(relative_fitness, relative_rmse, max_iteration));
                 cloud->Transform(result_icp.transformation_);
             }
 
@@ -280,8 +294,43 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
         }
     });
 
+    // 声源定位线程
+    if (ENABLE_SOUND_SOURCE_LOCALIZATION) {
+        thread ssl_thread([&]() {
+            cas::ssl::SoundSourceDetector sound_source_detector(SAMPLE_RATE, SAMPLES, CHANNELS, MICROPHONE_NAME);
+            sound_source_detector.start();
+            while (true) {
+                // unique_lock<mutex> lock(ssl_mutex);
+                Eigen::Vector3f sound_source = sound_source_detector.locate();
+                // cout << sound_source << endl;
+                cas::proto::DataMessage data_message;
+                data_message.set_type(cas::proto::DataMessage::SOUND_SOURCE);
+                cas::proto::SoundSource *sound_source_message = data_message.mutable_sound_source();
+                sound_source_message->set_x(sound_source[0]);
+                sound_source_message->set_y(sound_source[1]);
+                sound_source_message->set_z(sound_source[2]);
+                cout << "声源位置: " << sound_source[0] << ", " << sound_source[1] << ", " << sound_source[2] << endl;
+
+                ostringstream output_stream(ios::binary);
+
+                // 将 pg 对象序列化到内存输出流中
+                if (!data_message.SerializeToOstream(&output_stream)) {
+                    cerr << "序列化声源位置消息失败" << endl;
+                }
+
+                // 获取序列化后的数据并发送到网络对端
+                string serialized_data = output_stream.str();
+                if (send(client_fd, serialized_data.data(), serialized_data.size(), 0) < 0) {
+                    cerr << "发送声源位置消息失败" << endl;
+                } else {
+                    cout << "发送声源位置消息成功" << endl;
+                }
+            }
+        });
+    }
+
     // 机械臂线程
-    thread arm_thread([&]() {
+    thread bot_arm_thread([&]() {
         while (true) {
             // unique_lock<mutex> lock(arm_mutex);
 
@@ -291,6 +340,34 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
             memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入 databuff 中
 
             write(arm_fd, databuff, recv_long);
+        }
+    });
+
+    // 底盘车线程
+    thread bot_car_thread([&]() {
+        while (true) {
+            // unique_lock<mutex> lock(car_mutex);
+
+            // 等待接受到底盘车的数据
+            // recv_long = recv(client_fd, tempbuff, 1024, 0);
+
+            // memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入 databuff 中
+
+            // write(car_fd, databuff, recv_long);
+        }
+    });
+
+    // 舵机线程
+    thread bot_motor_thread([&]() {
+        while (true) {
+            // unique_lock<mutex> lock(motor_mutex);
+
+            // 等待接受到电机的数据
+            // recv_long = recv(client_fd, tempbuff, 1024, 0);
+
+            // memcpy(databuff, tempbuff, recv_long);//将接收到的数据存入 databuff 中
+
+            // write(motor_fd, databuff, recv_long);
         }
     });
 
@@ -372,7 +449,10 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
             if (IS_CREATE_SERVER) {
                 // 定义一个proto消息
-                cas::proto::Mesh mesh_message;
+                cas::proto::DataMessage data_message;
+                // 设置消息类型
+                data_message.set_type(cas::proto::DataMessage::MESH);
+                cas::proto::Mesh *mesh_message = data_message.mutable_mesh();
                 // 顶点坐标
                 const vector<Eigen::Vector3d> &vertices = des_mesh->vertices_;
                 // 顶点索引
@@ -382,47 +462,58 @@ int main(int argc, char **argv) {//TODO: 可以传参，传入配置文件路径
 
                 int write_count = 0;
                 for (int i = 0; i < triangles.size(); i++) {
-                    cas::proto::V1 *v1 = mesh_message.add_v1();
+                    cas::proto::V1 *v1 = mesh_message->add_v1();
                     int v1_index = triangles[i][0];
                     v1->set_x(vertices[v1_index][0]);
                     v1->set_y(vertices[v1_index][1]);
                     v1->set_z(vertices[v1_index][2]);
 
-                    cas::proto::V2 *v2 = mesh_message.add_v2();
+                    cas::proto::V2 *v2 = mesh_message->add_v2();
                     int v2_index = triangles[i][1];
                     v2->set_x(vertices[v2_index][0]);
                     v2->set_y(vertices[v2_index][1]);
                     v2->set_z(vertices[v2_index][2]);
 
-                    cas::proto::V3 *v3 = mesh_message.add_v3();
+                    cas::proto::V3 *v3 = mesh_message->add_v3();
                     int v3_index = triangles[i][2];
                     v3->set_x(vertices[v3_index][0]);
                     v3->set_y(vertices[v3_index][1]);
                     v3->set_z(vertices[v3_index][2]);
 
-                    mesh_message.add_r((colors[v1_index][0] + colors[v2_index][0] + colors[v3_index][0]) / 3.0);
-                    mesh_message.add_g((colors[v1_index][1] + colors[v2_index][1] + colors[v3_index][1]) / 3.0);
-                    mesh_message.add_b((colors[v1_index][2] + colors[v2_index][2] + colors[v3_index][2]) / 3.0);
+                    mesh_message->add_r((colors[v1_index][0] + colors[v2_index][0] + colors[v3_index][0]) / 3.0);
+                    mesh_message->add_g((colors[v1_index][1] + colors[v2_index][1] + colors[v3_index][1]) / 3.0);
+                    mesh_message->add_b((colors[v1_index][2] + colors[v2_index][2] + colors[v3_index][2]) / 3.0);
 
                     if ((i + 1) % 800 == 0 || i == triangles.size() - 1) {
+                        // 发送数据
                         // 创建一个内存输出流
-                        ostringstream output_stream(ios::binary);
+                        // ostringstream output_stream(ios::binary);
 
-                        // 将 pg 对象序列化到内存输出流中
-                        if (!mesh_message.SerializeToOstream(&output_stream)) {
-                            cerr << "序列化消息失败" << endl;
+                        // // 将 pg 对象序列化到内存输出流中
+                        // if (!data_message.SerializeToOstream(&output_stream)) {
+                        //     cerr << "序列化场景模型消息失败" << endl;
+                        // }
+
+                        // // 获取序列化后的数据并发送到网络对端
+                        // string serialized_data = output_stream.str();
+                        // if (write(client_fd, serialized_data.data(), serialized_data.size()) < 0) {
+                        //     cerr << "发送场景模型消息失败" << endl;
+                        // }
+                        string serialized_data;
+                        if (!mesh_message->SerializeToString(&serialized_data)) {
+                            cerr << "序列化场景模型消息失败" << endl;
                         }
 
-                        // 获取序列化后的数据并发送到网络对端
-                        string serialized_data = output_stream.str();
-                        if (write(client_fd, serialized_data.data(), serialized_data.size()) < 0) {
-                            cerr << "发送消息失败" << endl;
+                        if (send(client_fd, serialized_data.data(), serialized_data.size(), 0) < 0) {
+                            // if (write(client_fd, serialized_data.data(), serialized_data.size()) < 0) {
+                            cerr << "发送场景模型消息失败" << endl;
                         }
 
-                        mesh_message.Clear();
+                        mesh_message->Clear();
                         write_count++;
                     }
                 }
+
                 cout << "===============================" << endl;
                 cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
                 cout << "== 面片数量: " << triangles.size() << endl;

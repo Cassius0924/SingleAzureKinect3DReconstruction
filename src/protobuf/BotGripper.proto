@@ -1,0 +1,7 @@
+syntax = "proto3";
+package cas.proto;
+
+// 夹爪
+message BotGripper{
+    bool status = 1;
+}

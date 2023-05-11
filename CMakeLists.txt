@@ -30,22 +30,31 @@ include_directories("/usr/local/include/open3d")
 add_executable(AcquiringPointCloud 
         src/AcquiringPointCloud.cpp 
         src/CasAzureKinectExtrinsics.cpp 
+        src/CasSoundSourceLocalization.cpp
         src/CasAzureKinect.cpp 
         src/CasConfig.cpp
         src/CasBot.cpp
         src/CasNetwork.cpp
-        src/Mesh.pb.cc
-        )
 
-add_executable(TcpTest
-        src/TcpTest.cpp
-        src/CasNetwork.cpp
+        src/DataMessage.pb.cc
+        src/BotCar.pb.cc
+        src/BotGripper.pb.cc
+        src/BotMotor.pb.cc
         src/Mesh.pb.cc
+        src/SoundSource.pb.cc
+        src/Temperature.pb.cc
         )
 
 add_executable(soundTest
         src/soundTest.cpp
         src/CasAzureKinect.cpp
+        src/CasBot.cpp
+        src/CasSoundSourceLocalization.cpp
+        )
+
+add_executable(CasControlCar.cpp
+        src/CasControlCar.cpp
+        src/CasBot.cpp
         )
 
 # 指定头文件目录
@@ -58,10 +67,6 @@ target_link_libraries(AcquiringPointCloud
         ${Protobuf_LIBRARIES}
         asound
         fftw3
-        )
-
-target_link_libraries(TcpTest
-        ${Protobuf_LIBRARIES}
         )
 
 target_link_libraries(soundTest PRIVATE

@@ -1,0 +1,7 @@
+syntax = "proto3";
+package cas.proto;
+
+// 舵机
+message BotMotor{
+    int32 angle = 1;
+}
