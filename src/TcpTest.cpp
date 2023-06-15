@@ -1,5 +1,5 @@
 #include "CasNetwork.h"
-#include "Mesh.pb.h"
+#include "CasBot.h"
 #include <chrono>
 #include <thread>
 
@@ -16,6 +16,7 @@ int main() {
     memset(&sockaddr, 0, sizeof(sockaddr));
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(5001);
+
 
     char ip_local[32 + 1] = {0};
     if (!cas::net::getLocalIp(ip_local)) {
@@ -41,6 +42,7 @@ int main() {
         return -1;
     }
 
+    int fd_arm = cas::bot::initArm("/dev/ttyUSB0");
     //等待客户端连接
     cout << "等待客户端连接..." << endl;
 
@@ -60,7 +62,6 @@ int main() {
     string c = "EXIT";
     send(client_fd, c.c_str(), c.length(), 0);
 
-    int fd_arm;
 
     unsigned char tempbuff[1024]; /*临时缓存*/
     unsigned char databuff[18];
@@ -84,9 +85,8 @@ int main() {
             memcpy(databuff, tempbuff, recv_long);
             cout << "接收到的数据长度：" << recv_long << endl;
             cout << "接收到的数据：" << databuff << endl;
-        } else {
-            cout << "接收到的数据长度：" << recv_long << endl;
-            cout << "接收到的数据：" << databuff << endl;
+            write(fd_arm, databuff, sizeof(databuff));
+            //
         }
         
         // std::this_thread::sleep_for(std::chrono::milliseconds(500));

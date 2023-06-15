@@ -1,14 +1,20 @@
 // #include "CasAzureKinect.h"
 #include "CasBot.h"
-#include "CasSoundSourceLocalization.h"
+// #include "CasSoundSourceLocalization.h"
 
 #include <iostream>
+
+#include <open3d/Open3D.h>
+#include <DataMessage.pb.h>
 #include <string>
 
 using namespace std;
 
 int main() {
     int fd = cas::bot::initMotor("dev/ttyUSB0");
+    auto final_cloud = make_shared<open3d::geometry::PointCloud>();
+    cas::proto::DataMessage data_message;
+    data_message.set_type(cas::proto::DataMessage::SOUND_SOURCE);
     // 控制小车移动
     // int fd = cas::bot::initBotCar("/dev/ttyUSB0");
     // int c = 0;

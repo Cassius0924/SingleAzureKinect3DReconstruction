@@ -4,7 +4,10 @@
 # 依赖库
 - Azure Kinect SDK
 - Eigen
-- Open3D
+- Open3D: 编译时需要开启 CXX11_ABI
+- Protobuf: 3.20.2
+- fftw3
+- CMake: 3.21.1
 
 # 创建数据存放文件夹
 ```bash

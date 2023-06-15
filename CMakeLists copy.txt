@@ -1,5 +1,5 @@
 # Enable C++11
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.10)
 
 SET(CMAKE_CXX_STANDARD 17) #Open3D需要C++14以上版本
 SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -17,19 +17,10 @@ find_package(k4a REQUIRED)
 find_package(Eigen3 REQUIRED)
 include_directories("/usr/include/eigen3")
 
-# set(Protobuf_FOUND "True")
-# set(Protobuf_VERSION "3.20.3")
-# set(Protobuf_INCLUDE_DIRS "/usr/local/include")
-# set(Protobuf_LIBRARIES "/usr/local/lib/libprotobuf.so;-lpthread")
-# set(Protobuf_PROTOC_LIBRARIES "/usr/local/lib/libprotoc.so;-lpthread")
-# set(Protobuf_LITE_LIBRARIES "/usr/local/lib/libprotobuf-lite.so;-lpthread")
-
-# Protobuf
+#Protobuf
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-file(GLOB PROTO_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/protobuf/*.proto)
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
+link_directories(${Protobuf_LIBRARY_DIRS})
 
 # OPEN3D
 find_package(Open3D REQUIRED)
@@ -44,24 +35,27 @@ add_executable(AcquiringPointCloud
         src/CasConfig.cpp
         src/CasBot.cpp
         src/CasNetwork.cpp
-        ${PROTO_SRCS} 
-        ${PROTO_HDRS} 
+
+        src/DataMessage.pb.cc
+        src/BotCar.pb.cc
+        src/BotGripper.pb.cc
+        src/BotMotor.pb.cc
+        src/Mesh.pb.cc
+        src/SoundSource.pb.cc
+        src/Temperature.pb.cc
         )
 
 add_executable(soundTest
         src/soundTest.cpp
         src/CasAzureKinect.cpp
         src/CasBot.cpp
-
         src/CasSoundSourceLocalization.cpp
-        ${PROTO_SRCS} 
-        ${PROTO_HDRS} 
         )
 
-# add_executable(CasControlCar
-#         src/CasControlCar.cpp
-#         src/CasBot.cpp
-#         )
+add_executable(CasControlCar.cpp
+        src/CasControlCar.cpp
+        src/CasBot.cpp
+        )
 
 # 指定头文件目录
 include_directories(include)
@@ -78,8 +72,6 @@ target_link_libraries(AcquiringPointCloud
 target_link_libraries(soundTest PRIVATE
         k4a::k4a
         asound
-        ${Open3D_LIBRARIES}
-        ${Protobuf_LIBRARIES}
         ${Eigen3_LIBRARIES}
         fftw3
         )

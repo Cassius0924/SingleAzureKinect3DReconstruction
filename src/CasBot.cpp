@@ -119,7 +119,7 @@ int cas::bot::initArm(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
 
     newtio.c_cc[VMIN] = 1;
     newtio.c_cc[VTIME] = 0;
-    fd_device = open("/dev/ttyUSB0", O_RDWR);//读写方式打开串口
+    fd_device = open(serial_port_name.c_str(), O_RDWR);//读写方式打开串口
     //set UART
     if (fd_device < 0) {
         cerr << "机械臂设备连接失败！arm_fd = " << fd_device << endl;
@@ -156,7 +156,7 @@ int cas::bot::initMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
 
     newtio.c_cc[VMIN] = 1;
     newtio.c_cc[VTIME] = 0;
-    fd_device = open("/dev/ttyUSB0", O_RDWR);//读写方式打开串口
+    fd_device = open(serial_port_name.c_str(), O_RDWR);//读写方式打开串口
 
     //set UART
     if (fd_device < 0) {
@@ -193,7 +193,7 @@ int cas::bot::initBotCar(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
     //4）当VMIN = 0，VTIME = 0时 如果有数据可用，则read最多返回所要求的字节数，如果无数据可用，则read立即返回0。MIN > 0 , TIME =0 READ 会等待,直到MIN字元可读
     newtio.c_cc[VMIN] = 1;
     newtio.c_cc[VTIME] = 0;
-    fd_device = open("/dev/ttyUSB0", O_RDWR);//读写方式打开串口
+    fd_device = open(serial_port_name.c_str(), O_RDWR);//读写方式打开串口
 
     //set UART
     if (fd_device < 0) {
