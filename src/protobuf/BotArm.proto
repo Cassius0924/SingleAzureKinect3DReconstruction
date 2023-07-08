@@ -1,0 +1,6 @@
+syntax = "proto3";
+package cas.proto;
+
+message BotArm{
+    repeated bytes data_buffer = 1;
+}

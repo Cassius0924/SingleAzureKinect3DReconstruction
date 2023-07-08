@@ -9,12 +9,19 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <sstream>
+#include "DataMessage.pb.h"
 
 namespace cas {
     namespace net {
         bool getLocalIp(char *ip);
 
         int creatServerSocket(int port);
+
+        namespace proto{
+            bool send_message(int fd, google::protobuf::Message &message);
+            bool send_exit_mesh_message(int fd);
+        }
     };// namespace net
 }// namespace cas
 

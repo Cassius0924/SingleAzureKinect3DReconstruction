@@ -1,5 +1,4 @@
 //
-//
 // Created by root on 4/7/23.
 //
 
@@ -171,6 +170,11 @@ bool cas::getAzureKinectImuSample(k4a_device_t device, k4a_imu_sample_t *imu_sam
 //roll:绕x轴旋转的角度，pitch:绕y轴旋转的角度，yaw:绕z轴旋转的角度
 cas::EulerAngle::EulerAngle(double r, double p, double y) : roll(r), pitch(p), yaw(y) {}
 
+cas::EulerAngle& cas::EulerAngle::operator=(const double v) {
+    roll = pitch = yaw = v;
+    return *this;
+}
+// END: ed8c6549bwf9_impl//
 
 //定义一个函数，用来根据陀螺仪的数据和上一时刻的姿态，计算当前时刻的姿态
 cas::EulerAngle cas::calculateOrientation(double gx, double gy, double gz, double dt, const EulerAngle &prevAngle) {

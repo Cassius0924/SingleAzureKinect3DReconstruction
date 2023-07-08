@@ -38,6 +38,8 @@ namespace cas {
     public:
         double roll, pitch, yaw;                             //横滚角，俯仰角，偏航角，单位弧度
         EulerAngle(double r = 0, double p = 0, double y = 0);//构造函数
+        // 算术运算符重载 = 
+        EulerAngle &operator=(const double v);
     };
 
     // 计算角度

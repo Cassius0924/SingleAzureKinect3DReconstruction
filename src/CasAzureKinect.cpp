@@ -41,13 +41,13 @@ bool cas::kinect::stabilizeCamera(k4a::device &device) {
     int i_auto_error = 0;// 统计自动曝光的失败次数
     while (true) {
         if (device.get_capture(&capture)) {
-            cout << i_auto << " 稳定相机，用于自动曝光" << endl;
+            cout << "|" << flush;   // flush：刷新缓冲区
             // 跳过前 n 个（成功的数据采集）循环，用来稳定
             if (i_auto != 30) {
                 i_auto++;
                 continue;
             } else {
-                cout << "自动曝光完成" << endl;
+                cout << "100%" << endl << "自动曝光完成" << endl;
                 break;// 跳出该循环，完成相机的稳定过程
             }
         } else {

@@ -48,20 +48,28 @@ add_executable(AcquiringPointCloud
         ${PROTO_HDRS} 
         )
 
-add_executable(soundTest
-        src/soundTest.cpp
-        src/CasAzureKinect.cpp
-        src/CasBot.cpp
-
-        src/CasSoundSourceLocalization.cpp
-        ${PROTO_SRCS} 
-        ${PROTO_HDRS} 
-        )
-
-# add_executable(CasControlCar
-#         src/CasControlCar.cpp
+# add_executable(soundTest
+#         src/soundTest.cpp
+#         src/CasAzureKinect.cpp
 #         src/CasBot.cpp
+
+#         src/CasSoundSourceLocalization.cpp
+#         ${PROTO_SRCS} 
+#         ${PROTO_HDRS} 
 #         )
+
+# add_executable(TcpTest
+#         src/TcpTest.cpp
+#         src/CasNetwork.cpp
+#         src/CasBot.cpp
+#         ${PROTO_SRCS} 
+#         ${PROTO_HDRS} 
+#         )
+
+add_executable(CasControlCar
+        src/CasControlCar.cpp
+        src/CasBot.cpp
+        )
 
 # 指定头文件目录
 include_directories(include)
@@ -75,15 +83,27 @@ target_link_libraries(AcquiringPointCloud
         fftw3
         )
 
-target_link_libraries(soundTest PRIVATE
-        k4a::k4a
-        asound
-        ${Open3D_LIBRARIES}
-        ${Protobuf_LIBRARIES}
+target_link_libraries(CasControlCar 
         ${Eigen3_LIBRARIES}
-        fftw3
+        ${Protobuf_LIBRARIES}
+        ncurses
         )
 
+# target_link_libraries(soundTest PRIVATE
+#         k4a::k4a
+#         asound
+#         ${Open3D_LIBRARIES}
+#         ${Protobuf_LIBRARIES}
+#         ${Eigen3_LIBRARIES}
+#         fftw3
+#         )
+
+# target_link_libraries(TcpTest PRIVATE
+#         asound
+#         ${Open3D_LIBRARIES}
+#         ${Protobuf_LIBRARIES}
+#         ${Eigen3_LIBRARIES}
+#         )
 
 
 

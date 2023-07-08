@@ -7,23 +7,28 @@ import "Temperature.proto";
 import "BotCar.proto";
 import "BotGripper.proto";
 import "BotMotor.proto";
+import "BotArm.proto";
 
 message DataMessage {
     enum Type {
-        MESH = 0;
-        SOUND_SOURCE = 1;
-        TEMPERATURE = 2;
+        OTHER = 0;
+        MESH = 1;
+        EXIT_MESH = -1;
+        SOUND_SOURCE = 2;
         BOT_CAR = 3;
         BOT_GRIPPER = 4;
         BOT_MOTOR = 5;
+        BOT_ARM = 6;
+        TEMPERATURE = 7;
     }
     Type type = 1;
     oneof data {
         Mesh mesh = 2;
         SoundSource sound_source = 3;
-        Temperature temperature = 4;
-        BotCar bot_car = 5;
-        BotGripper bot_gripper = 6;
-        BotMotor bot_motor = 7;
+        BotCar bot_car = 4;
+        BotGripper bot_gripper = 5;
+        BotMotor bot_motor = 6;
+        BotArm bot_arm = 7;
+        Temperature temperature = 8;
     }
 }
