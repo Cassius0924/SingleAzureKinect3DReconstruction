@@ -139,6 +139,8 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     //    float prev_roll = 100;
     //    float prev_pitch = 100;
     float prev_yaw = 100;
+    float first_euler_angle = 0;
+    bool first_euler_angle_flag = true;
 
     // 定义欧拉角
     cas::EulerAngle prev_angle(0, 0, 0);
@@ -296,11 +298,10 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                 // 精配准: 基于彩色 ICP 算法。
                 final_cloud.EstimateNormals(kd_tree_param); // 估计法向量
                 cloud.EstimateNormals(kd_tree_param);
-                auto result_icp = open3d::pipelines::registration::RegistrationColoredICP(
+                auto result_icp = open3d::pipelines::registration::RegistrationICP(
                     cloud, final_cloud, VOXEL_SIZE * 2, transformation_icp,
-                    open3d::pipelines::registration::TransformationEstimationForColoredICP(), icp_criteria);
+                    open3d::pipelines::registration::TransformationEstimationPointToPlane(), icp_criteria);
                 cloud.Transform(result_icp.transformation_);
-
             }
 
             final_cloud += cloud;
@@ -377,6 +378,15 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
             switch ((int)data_message.type()) {
                 case (int)cas::proto::DataMessage::BOT_MOTOR: {
                     cout << "收到电机数据" << endl;
+
+                    cout << "重启相机中" << endl;
+                    device.start_cameras(&config);
+                    device.start_imu();
+                    // 稳定化
+                    cas::kinect::stabilizeCamera(device);
+                    cout << "开启相机。" << endl;
+
+                    need_reconnstrcution = true;
                     ready_to_break = false;
                     need_break = false;
                     camera_task_count = 0;
@@ -385,7 +395,6 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                     registration_flag = 0;
                     final_cloud = open3d::geometry::PointCloud();
                     if (bot_motor.rotate(FIRST_MOTOR_ROTATION)) {
-                        need_reconnstrcution = true;
                         cout << "舵机旋转成功" << endl;
                         if (FIRST_MOTOR_ROTATION == "F") {
                             FIRST_MOTOR_ROTATION = "R";
@@ -510,7 +519,23 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                 }
             }
 
-            if (abs(prev_angle.yaw) > EXIT_RADIAN) {
+            // 记录第一次的欧拉角，因为第一次的欧拉角不一定是0
+            if (first_euler_angle_flag) {
+                first_euler_angle_flag = false;
+                first_euler_angle = prev_angle.yaw;
+                cout << "abs: " << prev_angle.yaw << endl;
+            }
+
+            cout << "abs: " << abs(prev_angle.yaw) << endl;
+            cout << "左边：" << abs(prev_angle.yaw - first_euler_angle )<< endl;
+            if (abs(prev_angle.yaw - first_euler_angle) > EXIT_RADIAN) {
+
+                // 关闭相机，释放内存
+                rgb_image.reset();
+                depth_image.reset();
+                capture.reset();
+                device.stop_imu();
+                device.stop_cameras();
 
                 cout << "旋转角度大于" << EXIT_RADIAN << "，退出" << endl;
                 ready_to_break = true;
@@ -616,6 +641,7 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                 client.sendExitMeshMessage();
                 need_reconnstrcution = false;
                 prev_angle = 0;
+                first_euler_angle_flag = true;
 
                 // prev_yaw = 100;
                 // break;
