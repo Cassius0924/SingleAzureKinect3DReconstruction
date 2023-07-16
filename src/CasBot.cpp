@@ -4,10 +4,6 @@
 #include <iostream>
 #include <thread>
 
-#define DEFAULT_SERIAL_PORT_NAME "/dev/ttyUSB0"
-#define WHEEL_D 20 // 单位厘米（cm）
-#define WHEEL_DISTANCE 53
-
 using namespace std;
 
 void rightArmAutoRealy(unsigned char *databuff) {
@@ -105,7 +101,6 @@ cas::bot::BotArm::BotArm(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
     newtio.c_cflag |= CLOCAL | CREAD; // 使驱动程序启动接收字符装置，同时忽略串口信号线的状态
     newtio.c_iflag &= ~(IXON | IXOFF | IXANY); // 禁用软件流控制
     newtio.c_oflag &= ~OPOST; // 使用原始输出，就是禁用输出处理，使数据能不经过处理、过滤地完整地输出到串口接口。
-    // 在原始模式下，串口输入数据是不经过处理的，在串口接口接收的数据被完整保留。要使串口设备工作在原始模式，需要关闭ICANON、ECHO、ECHOE和ISIG选项，其操作方法如下：
     newtio.c_lflag &=
         ~(ICANON | ECHO | ECHOE | ISIG); // 在原始模式下，串口输入数据是不经过处理的，在串口接口接收的数据被完整保留。
     newtio.c_cc[VMIN] = 1;
@@ -123,6 +118,14 @@ cas::bot::BotArm::BotArm(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
         return;
     }
     cout << "机械臂设备初始化成功！" << endl;
+    this->command_buffer[0] = 0xFE;
+    this->command_buffer[1] = 0xFE;
+    this->gripper_buffer[0] = 0xFE;
+    this->gripper_buffer[1] = 0xFE;
+    this->gripper_buffer[2] = 0x04;
+    this->gripper_buffer[3] = CommandSet::SEND_GRIPPER_ANGLE;
+    this->gripper_buffer[5] = 0x32;
+    this->gripper_buffer[6] = 0xFA;
 }
 
 bool cas::bot::BotArm::reset() {
@@ -133,66 +136,97 @@ bool cas::bot::BotArm::reset() {
     return true;
 }
 
-bool cas::bot::BotArm::execute(unsigned char *data_buffer, int length) {
+bool cas::bot::BotArm::execute(const char *data_buffer, int length) {
     if (write(this->fd, data_buffer, length) < 0) {
         return false;
     }
     return true;
 }
 
-// 复位机械臂
-// int cas::bot::resetCobot(int fd) {
-//     unsigned char databuff[16] = {0};
-//     memset(databuff, 0, 16);                // 清空数组
-//     databuff[12] = 0x1e;                    // 速度
-//     serialTX(fd, POST_ALL_ANGLE, databuff); // 发送数据
-//     return 0;
-// }
+int cas::bot::BotArm::recvData(unsigned char *recv_buffer, const int recv_length) {
+    int len = -1;
+    while ((len = read(this->fd, recv_buffer, recv_length)) < 0)
+        ;
+    switch (recv_buffer[3]) { // 数据帧
+        case cas::bot::BotArm::DataSet::ALL_ANGLE: {
+            // 计算方法：角度值低位 + 角度高位值乘以256 先判断是否大于33000，
+            //         如果大于33000就再减去65536，最后除以100，如果小于33000就直接除以100
+            int angles[6];
+            for (int i = 0; i < 6; i++) {
+                if (recv_buffer[5 + 2 * i] + recv_buffer[4 + 2 * i] * 256 > 33000) {
+                    angles[i] = (recv_buffer[5 + 2 * i] + recv_buffer[4 + 2 * i] * 256 - 65536) / 100;
+                } else {
+                    angles[i] = (recv_buffer[5 + 2 * i] + recv_buffer[4 + 2 * i] * 256) / 100;
+                }
+            }
+            break;
+        }
+        case cas::bot::BotArm::DataSet::ALL_COORD: {
 
-// 对机械臂串口初始化
-// int cas::bot::initArm(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
-//     int fd_device;
-//     struct termios newtio;
-//     tcgetattr(fd_device, &newtio);
-//     newtio.c_cflag &= ~CSIZE;         // 数据位屏蔽 将c_cflag全部清零
-//     newtio.c_cflag = B115200;         // set bound
-//     newtio.c_cflag |= CS8;            // 数据位8
-//     newtio.c_cflag |= CLOCAL | CREAD; // 使驱动程序启动接收字符装置，同时忽略串口信号线的状态
+            break;
+        }
+        default:
+            cerr << "未知的机械臂数据类型！" << endl;
+            break;
+    }
+    return len;
+}
 
-//     newtio.c_iflag &= ~(IXON | IXOFF | IXANY); // 禁用软件流控制
+int getCommand(cas::bot::BotArm::CommandSet command_type, char *&command) {
+    int cmd_len = 1;
+    switch (command_type) {
+        case cas::bot::BotArm::CommandSet::READ_ANGLE: {
+            cmd_len = 2;
+            command = new char[cmd_len];
+            command[0] = cmd_len;
+            command[1] = cas::bot::BotArm::CommandSet::READ_ANGLE;
+            break;
+        }
+        case cas::bot::BotArm::CommandSet::READ_COORD: {
+            cmd_len = 2;
+            command = new char[cmd_len];
+            command[0] = cmd_len;
+            command[1] = cas::bot::BotArm::CommandSet::READ_COORD;
+            break;
+        }
+        case cas::bot::BotArm::CommandSet::FREE_MODE: {
+            cmd_len = 2;
+            command = new char[cmd_len];
+            command[0] = cmd_len;
+            command[1] = cas::bot::BotArm::CommandSet::FREE_MODE;
+            break;
+        }
+        default:
+            cerr << "未定义的命令类型！" << endl;
+            command = new char[1];
+            command[0] = 0x01;
+    }
+    return cmd_len;
+}
 
-//     newtio.c_oflag &= ~OPOST; // 使用原始输出，就是禁用输出处理，使数据能不经过处理、过滤地完整地输出到串口接口。
+bool cas::bot::BotArm::sendCommand(cas::bot::BotArm::CommandSet command_type) {
+    char *command;
+    int command_length = getCommand(command_type, command);
+    memcpy(this->command_buffer + 2, command, command_length);
+    this->command_buffer[command_length + 2] = 0xFA;
 
-//     //
-//     在原始模式下，串口输入数据是不经过处理的，在串口接口接收的数据被完整保留。要使串口设备工作在原始模式，需要关闭ICANON、ECHO、ECHOE和ISIG选项，其操作方法如下：
-//     newtio.c_lflag &=
-//         ~(ICANON | ECHO | ECHOE | ISIG); //
-//         在原始模式下，串口输入数据是不经过处理的，在串口接口接收的数据被完整保留。
+    // 计算方法：角度值低位 + 角度高位值乘以256 先判断是否大于33000 如果大于33000就再减去65536 最后除以100
+    // 如果小于33000就直接除以100
+    //  0x01 0x20 0xFA
+    return execute(this->command_buffer, command_length + 3);
+}
 
-//     // 4）当VMIN = 0，VTIME = 0时 如果有数据可用，则read最多返回所要求的字节数，如果无数据可用，则read立即返回0。MIN
-//     > 0
-//     // , TIME =0 READ 会等待,直到MIN字元可读
+bool cas::bot::BotArm::openGripper(const char value) {
+    this->gripper_buffer[4] = value;
+    return execute(this->gripper_buffer, 7);
+}
 
-//     newtio.c_cc[VMIN] = 1;
-//     newtio.c_cc[VTIME] = 0;
-//     fd_device = open(serial_port_name.c_str(), O_RDWR); // 读写方式打开串口
-//     // set UART
-//     if (fd_device < 0) {
-//         cerr << "机械臂设备连接失败！arm_fd = " << fd_device << endl;
-//         cerr << "串口打开失败！" << endl;
-//         return -1;
-//     }
-//     cout << "机械臂设备连接成功！arm_fd = " << fd_device << endl;
+bool cas::bot::BotArm::closeGripper() {
+    this->gripper_buffer[4] = 0x00;
+    return execute(this->gripper_buffer, 7);
+}
 
-//     if (tcsetattr(fd_device, TCSADRAIN, &newtio) != 0) {
-//         cerr << "串口初始化失败！" << endl;
-//         return -2;
-//     }
-//     cout << "机械臂设备初始化成功！" << endl;
-//     return fd_device; // 返回文件描述符
-// }
-
-cas::bot::BotMotor::BotMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
+cas::bot::STM32::STM32(string serial_port_name) {
     struct termios newtio;
     tcgetattr(this->fd, &newtio);
     newtio.c_cflag &= ~CSIZE;         // 数据位屏蔽 将c_cflag全部清零
@@ -219,6 +253,23 @@ cas::bot::BotMotor::BotMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME)
         return;
     }
     cout << "舵机设备初始化成功！" << endl;
+}
+
+bool cas::bot::STM32::sendData(unsigned char *send_buffer, const int send_length) {
+    if (write(this->fd, send_buffer, send_length) < 0) {
+        return false;
+    }
+    return true;
+}
+
+int cas::bot::STM32::recvData(unsigned char *recv_buffer, const int recv_length) {
+    int len = -1;
+    while ((len = read(this->fd, recv_buffer, recv_length)) < 0)
+        ;
+    return len;
+}
+
+cas::bot::BotMotor::BotMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) : STM32(serial_port_name) {
     this->buffer[0] = '@';
     this->buffer[1] = 'X';
     this->buffer[2] = '0';
@@ -233,21 +284,15 @@ cas::bot::BotMotor::BotMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME)
 bool cas::bot::BotMotor::rotate(string direction) {
     if (direction == "F" || direction == "R") {
         this->buffer[1] = direction[0];
-        this->buffer[2] = '0';
-        this->buffer[3] = '8';
-        this->buffer[4] = '5';
-        this->buffer[5] = '5';
+        this->buffer[2] = '1';
+        this->buffer[3] = '0';
+        this->buffer[4] = '0';
+        this->buffer[5] = '0';
         this->buffer[6] = '0';
-        if (write(this->fd, this->buffer, 9) < 0) {
-            return false;
-        }
-    } else {
-        return false;
+        return STM32::sendData(this->buffer, 9);
     }
-    return true;
+    return false;
 }
-
-
 
 // int cas::bot::initMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
 //     int fd_device;
@@ -336,31 +381,8 @@ bool cas::bot::BotMotor::rotate(string direction) {
 //     return true;
 // }
 
-cas::bot::BotCar::BotCar(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
-    this->fd;
-    struct termios newtio;
-    tcgetattr(this->fd, &newtio);
-    newtio.c_cflag &= ~CSIZE;
-    newtio.c_cflag = B115200;
-    newtio.c_cflag |= CS8;
-    newtio.c_cflag |= CLOCAL | CREAD;
-    newtio.c_iflag &= ~(IXON | IXOFF | IXANY);
-    newtio.c_oflag &= ~OPOST;
-    newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    newtio.c_cc[VMIN] = 1;
-    newtio.c_cc[VTIME] = 0;
-    this->fd = open(serial_port_name.c_str(), O_RDWR); // 读写方式打开串口
-    if (this->fd < 0) {
-        cerr << "底盘车设备连接失败！bot_car_fd = " << this->fd << endl;
-        cerr << "串口打开失败！" << endl;
-        return;
-    }
-    cout << "底盘车设备连接成功！bot_car_fd = " << this->fd << endl;
-    if (tcsetattr(this->fd, TCSADRAIN, &newtio) != 0) {
-        cerr << "串口初始化失败！" << endl;
-        return;
-    }
-    cout << "底盘车设备初始化成功！" << endl;
+cas::bot::BotCar::BotCar(string serial_port_name, const char speed_value, float scale) : STM32(serial_port_name) {
+    setSpeed(speed_value, scale);
 }
 
 /**
@@ -385,6 +407,17 @@ void cas::bot::BotCar::setSpeed(const char speed_value, float scale) {
     this->buffer[8] = 0x00;
     this->buffer[9] = 0x00;
 
+    this->buffer2[0] = 0xff;
+    this->buffer2[1] = 0xfe;
+    this->buffer2[2] = speed_value; // A速度
+    this->buffer2[3] = speed_value; // B速度
+    this->buffer2[4] = 0x00;        // 方向，1左转，2右转
+    this->buffer2[5] = 0x00;        // 角度
+    this->buffer2[6] = 0x01;        // 模式：1角度旋转模式
+    this->buffer2[7] = 0x00;
+    this->buffer2[8] = 0x00;
+    this->buffer2[9] = 0x00;
+
     // 计算小车移动线速度
     cout << ((int)speed_value) * 100 / 7000.0 << endl;
     this->speed = ((int)speed_value) * 100 / 7000.0 * WHEEL_D * M_PI * scale;
@@ -397,19 +430,16 @@ void cas::bot::BotCar::setSpeed(const char speed_value, float scale) {
 bool cas::bot::BotCar::moveForward() {
     this->buffer[4] = 0x01;
     this->buffer[5] = 0x01;
-    if (write(this->fd, this->buffer, 10) < 0) {
-        return false;
-    }
-    return true;
+    return STM32::sendData(this->buffer, 10);
 }
 bool cas::bot::BotCar::moveForwardTime(float time_s) {
-    cout << "time_s = " << time_s << endl;
+    // cout << "time_s = " << time_s << endl;
     if (!moveForward()) {
         return false;
     }
     cout << (int)(time_s * 1000) << endl;
     this_thread::sleep_for(chrono::milliseconds((int)(time_s * 1000)));
-    cout << "stop" << endl;
+    // cout << "stop" << endl;
     return stopCar();
 }
 bool cas::bot::BotCar::moveForwardDistance(float distance) {
@@ -422,29 +452,15 @@ bool cas::bot::BotCar::moveForwardDistance(float distance) {
 }
 
 bool cas::bot::BotCar::moveBackward() {
-    unsigned char buffer1[10] = {0};
-    buffer1[0] = 0xff;
-    buffer1[1] = 0xfe;
-    buffer1[2] = 0x12; // A电机速度
-    buffer1[3] = 0x12; // B电机速度
-    buffer1[4] = 0x01; // A电机方向
-    buffer1[5] = 0x01; // B电机方向
-    buffer1[6] = 0x00;
-    buffer1[7] = 0x00;
-    buffer1[8] = 0x00;
-    buffer1[9] = 0x00;
     this->buffer[4] = 0x00;
     this->buffer[5] = 0x00;
-    if (write(this->fd, buffer1, 10) < 0) {
-        return false;
-    }
-    return true;
+    return STM32::sendData(this->buffer, 10);
 }
 bool cas::bot::BotCar::moveBackwardTime(float time_s) {
     if (!moveBackward()) {
         return false;
     }
-    sleep(time_s * 1000);
+    this_thread::sleep_for(chrono::milliseconds((int)(time_s * 1000)));
     return stopCar();
 }
 bool cas::bot::BotCar::moveBackwardDistance(float distance) {
@@ -457,18 +473,16 @@ bool cas::bot::BotCar::moveBackwardDistance(float distance) {
 }
 
 bool cas::bot::BotCar::turnLeft() {
-    buffer[4] = 0x00;
-    buffer[5] = 0x01;
-    if (write(this->fd, this->buffer, 10) < 0) {
-        return false;
-    }
-    return true;
+    this->buffer[4] = 0x00;
+    this->buffer[5] = 0x01;
+    return STM32::sendData(this->buffer, 10);
 }
 bool cas::bot::BotCar::turnLeftTime(float time_s) {
+    cout << "time_s = " << time_s << endl;
     if (!turnLeft()) {
         return false;
     }
-    sleep(time_s * 1000);
+    this_thread::sleep_for(chrono::milliseconds((int)(time_s * 1000)));
     return stopCar();
 }
 bool cas::bot::BotCar::turnLeftAngle(float angle) {
@@ -479,18 +493,16 @@ bool cas::bot::BotCar::turnLeftAngle(float angle) {
 }
 
 bool cas::bot::BotCar::turnRight() {
-    buffer[4] = 0x01;
-    buffer[5] = 0x00;
-    if (write(this->fd, this->buffer, 10) < 0) {
-        return false;
-    }
-    return true;
+    this->buffer[4] = 0x01;
+    this->buffer[5] = 0x00;
+    return STM32::sendData(this->buffer, 10);
 }
+
 bool cas::bot::BotCar::turnRightTime(float time_s) {
     if (!turnRight()) {
         return false;
     }
-    sleep(time_s * 1000);
+    this_thread::sleep_for(chrono::milliseconds((int)(time_s * 1000)));
     return stopCar();
 }
 bool cas::bot::BotCar::turnRightAngle(float angle) {
@@ -509,36 +521,76 @@ bool cas::bot::BotCar::turnAngle(float angle) {
     return true;
 }
 
-bool cas::bot::BotCar::stopCar() {
-    buffer[4] = 0x00;
-    buffer[5] = 0x00;
-    if (write(this->fd, this->buffer, 10) < 0) {
+bool cas::bot::BotCar::autoTurnByAngle(float angle) {
+    if (angle > 0) {
+        this->buffer2[4] = 0x01; // 大于0左转，小于0右转
+        this->buffer2[5] = (int)angle - 1;
+    } else if (angle < 0) {
+        this->buffer2[4] = 0x02; // 大于0左转，小于0右转
+        this->buffer2[5] = -(int)angle - 1;
+    } else {
         return false;
     }
+    return STM32::sendData(this->buffer2, 10);
+}
+
+bool cas::bot::BotCar::autoTurnByAngleAndSpeed(float angle, char left_speed_value, char right_speed_value) {
+    int left_temp = this->buffer2[2];
+    int right_temp = this->buffer2[3];
+    this->buffer2[2] = left_speed_value;
+    this->buffer2[3] = right_speed_value;
+    if (!autoTurnByAngle(angle)) {
+        return false;
+    }
+    this->buffer2[2] = left_temp;
+    this->buffer2[3] = right_temp;
     return true;
 }
 
-bool cas::bot::BotCar::executeMoveSequence(int *seq, int seq_length) {
-    int flag = seq[0];
+bool cas::bot::BotCar::stopCar() {
+    int left_temp = this->buffer[2];
+    int right_temp = this->buffer[3];
+    this->buffer[2] = 0x00;
+    this->buffer[3] = 0x00;
+    if (!STM32::sendData(this->buffer, 10)) {
+        return false;
+    }
+    this->buffer[2] = left_temp;
+    this->buffer[3] = right_temp;
+    return true;
+}
+
+bool cas::bot::BotCar::executeMoveSequence(float *seq, int seq_length) {
+    float flag = seq[0];
     if (flag == 1) { // 先移动
         // 奇数下标为移动，偶数下标为旋转
         for (int i = 1; i < seq_length; i++) {
+            cout << "执行：" << seq[i] << endl;
             if (i % 2 == 1) { // 如果是奇数
                 moveForwardDistance(seq[i]);
+                this_thread::sleep_for(chrono::milliseconds(500));
             } else {
-                turnAngle(seq[i]);
+                // turnAngle(-seq[i]);
+                autoTurnByAngle(seq[i]);
+                this_thread::sleep_for(chrono::milliseconds(8000));
             }
         }
-    } else if (flag = 0) { // 先旋转
+    } else if (flag == 0) { // 先旋转
         // 奇数下标为旋转，偶数下标为移动
         for (int i = 1; i < seq_length; i++) {
+            cout << "执行：" << seq[i] << endl;
             if (i % 2 == 1) { // 如果是奇数
-                turnAngle(seq[i]);
+                // turnAngle(-seq[i]);
+                autoTurnByAngle(seq[i]);
+                this_thread::sleep_for(chrono::milliseconds(8000));
             } else {
                 moveForwardDistance(seq[i]);
+                this_thread::sleep_for(chrono::milliseconds(500));
             }
         }
     } else {
         cerr << "未知的底盘车移动序列" << endl;
+        return false;
     }
+    return true;
 }

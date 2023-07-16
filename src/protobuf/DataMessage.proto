@@ -3,11 +3,12 @@ package cas.proto;
 
 import "Mesh.proto";
 import "SoundSource.proto";
-import "Temperature.proto";
+import "TempAndHumi.proto";
 import "BotCar.proto";
 import "BotGripper.proto";
 import "BotMotor.proto";
 import "BotArm.proto";
+import "BotLed.proto";
 
 message DataMessage {
     enum Type {
@@ -19,7 +20,8 @@ message DataMessage {
         BOT_GRIPPER = 4;
         BOT_MOTOR = 5;
         BOT_ARM = 6;
-        TEMPERATURE = 7;
+        BOT_LED = 7;
+        TEMP_AND_HUMI = 8;
     }
     Type type = 1;
     oneof data {
@@ -29,6 +31,7 @@ message DataMessage {
         BotGripper bot_gripper = 5;
         BotMotor bot_motor = 6;
         BotArm bot_arm = 7;
-        Temperature temperature = 8;
+        BotLed bot_led = 8;
+        TempAndHumi temp_and_humi = 9;
     }
 }

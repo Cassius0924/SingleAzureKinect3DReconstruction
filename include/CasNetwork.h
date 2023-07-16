@@ -1,28 +1,42 @@
 #ifndef CASNETWORK_H
 #define CASNETWORK_H
 
+#include "DataMessage.pb.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <iostream>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <sstream>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <sstream>
-#include "DataMessage.pb.h"
+#include <netinet/tcp.h> //TCP_NODELAY
 
 namespace cas {
     namespace net {
-        bool getLocalIp(char *ip);
+        // bool getLocalIp(char *ip);
 
         int creatServerSocket(int port);
 
-        namespace proto{
+        namespace proto {
             bool send_message(int fd, google::protobuf::Message &message);
             bool send_exit_mesh_message(int fd);
-        }
-    };// namespace net
-}// namespace cas
+        } // namespace proto
 
-#endif//CASNETWORK_H
+        class Client {
+        private:
+            int fd;
+
+        public:
+            Client(const int port);
+            bool sendMessage(google::protobuf::Message &message);
+            int recvData(unsigned char *recv_buffer, const int recv_length);
+            bool recvMessage(cas::proto::DataMessage &message);
+            bool sendExitMeshMessage();
+        };
+
+    }; // namespace net
+} // namespace cas
+
+#endif // CASNETWORK_H

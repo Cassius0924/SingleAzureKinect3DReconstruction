@@ -1,6 +1,0 @@
-syntax = "proto3";
-package cas.proto;
-
-message Temperature {
-    float t = 1;
-}

@@ -35,9 +35,8 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 find_package(Open3D REQUIRED)
 include_directories("/usr/local/include/open3d")
 
-
-add_executable(AcquiringPointCloud 
-        src/AcquiringPointCloud.cpp 
+add_executable(EmergencyTeleoperatedRobotSystem
+        src/EmergencyTeleoperatedRobotSystem.cpp 
         src/CasAzureKinectExtrinsics.cpp 
         src/CasSoundSourceLocalization.cpp
         src/CasAzureKinect.cpp 
@@ -46,6 +45,10 @@ add_executable(AcquiringPointCloud
         src/CasNetwork.cpp
         ${PROTO_SRCS} 
         ${PROTO_HDRS} 
+        )
+
+add_executable(calcQ
+        src/calcQ.cpp
         )
 
 # add_executable(soundTest
@@ -74,13 +77,18 @@ add_executable(CasControlCar
 # 指定头文件目录
 include_directories(include)
 
-target_link_libraries(AcquiringPointCloud
+target_link_libraries(EmergencyTeleoperatedRobotSystem
         k4a::k4a
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}
         ${Protobuf_LIBRARIES}
         asound
         fftw3
+        )
+
+target_link_libraries(calcQ
+        ${Open3D_LIBRARIES}
+        ${Eigen3_LIBRARIES}
         )
 
 target_link_libraries(CasControlCar 

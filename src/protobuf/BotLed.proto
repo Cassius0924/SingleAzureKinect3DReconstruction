@@ -1,0 +1,12 @@
+syntax = "proto3";
+package cas.proto;
+
+// LED灯带
+message BotLed {
+    enum Mode {
+        CLOSE = 0;
+        GREEN = 1;
+        RED = 2;
+    }
+    Mode mode = 1;
+}

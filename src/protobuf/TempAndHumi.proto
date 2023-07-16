@@ -1,0 +1,7 @@
+syntax = "proto3";
+package cas.proto;
+
+message TempAndHumi{
+    float temp = 1;
+    float humi = 2;
+}
