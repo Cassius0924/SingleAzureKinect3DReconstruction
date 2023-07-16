@@ -6,3 +6,6 @@ cmake-build-debug
 build
 
 /kaolin-env
+
+/src/*.ply
+/src/*.pcd
