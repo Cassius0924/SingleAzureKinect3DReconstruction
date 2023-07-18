@@ -9,7 +9,6 @@
 
 #include <assert.h>
 #include <k4a/k4a.h>
-#include <k4a/k4a.hpp>
 #include <math.h>
 
 #include <atomic>
@@ -18,8 +17,6 @@
 #include <iostream>
 
 #include "open3d/Open3D.h"
-#include "CasAzureKinectExtrinsics.h"
-
 
 using namespace open3d;
 
@@ -67,7 +64,6 @@ int main(int argc, char **argv) {
         utility::LogInfo("Use default sensor config");
     }
 
-    // 获取传感器索引
     int sensor_index =
             utility::GetProgramOptionAsInt(argc, argv, "--device", 0);
     if (sensor_index < 0 || sensor_index > 255) {
@@ -76,11 +72,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // 获取是否对齐深度图
     bool enable_align_depth_to_color =
             utility::ProgramOptionExists(argc, argv, "-a");
 
-    // 获取输出文件名
+    // 输出路径
     std::string recording_filename = utility::GetProgramOptionAsString(
             argc, argv, "--output", utility::GetCurrentTimeStamp() + ".mkv");
     utility::LogInfo("Prepare writing to {}", recording_filename);
@@ -105,7 +100,7 @@ int main(int argc, char **argv) {
                             "Press [ESC] to save and exit.");
                     flag_record = false;
                 } else if (!recorder.IsRecordCreated()) {
-                    if (recorder.OpenRecord(recording_filename)) {
+                    if (recorder.OpenRecord(recording_filename)) {  // 打开文件
                         utility::LogInfo(
                                 "Recording started. "
                                 "Press [SPACE] to pause. "
@@ -139,50 +134,9 @@ int main(int argc, char **argv) {
             "press [ESC] to exit.");
 
     vis.CreateVisualizerWindow("Open3D Azure Kinect Recorder", 1920, 540);
-
-
-
-    // 初始化Azure Kinect设备
-//    k4a::device device = cas::openAzureKinectDevice();
-//
-//    // 配置Azure Kinect设备
-//    k4a_device_configuration_t config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-//    config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;       //NFOV
-//    config.color_resolution = K4A_COLOR_RESOLUTION_720P;    //720P
-//    config.camera_fps = K4A_FRAMES_PER_SECOND_30;           //30FPS
-//    cas::configureAzureKinectDevice(device, config);
-//
-//    device.start_imu();
-//
-//    uint64_t dt;
-//    uint64_t temp = 0;
-//
-//    cas::EulerAngle prevAngle(0, 0, 0);
-
-
     do {
-        //捕获一针
-//        k4a_capture_t capture;
-//        k4a_device_get_capture(device.handle(), &capture, K4A_WAIT_INFINITE);
-//
-//        k4a_imu_sample_t imu_sample;
-//        device.get_imu_sample(&imu_sample);
-//
-//        float gx = imu_sample.gyro_sample.xyz.x;
-//        float gy = imu_sample.gyro_sample.xyz.y;
-//        float gz = imu_sample.gyro_sample.xyz.z;
-//
-//        dt = (imu_sample.acc_timestamp_usec - temp);
-//        float dtf = (float) dt / 1000000;
-//        temp = imu_sample.acc_timestamp_usec;
-//        if (temp == 0) {
-//            continue;
-//        }
-//        prevAngle = calculateOrientation(gx, gy, gz, dtf, prevAngle);
-//        printf("roll:%.4f\tpitch:%.4f\tyaw:%.4f\tdt:%f\n", prevAngle.roll, prevAngle.pitch, prevAngle.yaw, dtf);
-//
-
-        auto im_rgbd = recorder.RecordFrame(flag_record, enable_align_depth_to_color);
+        auto im_rgbd =
+                recorder.RecordFrame(flag_record, enable_align_depth_to_color);
         if (im_rgbd == nullptr) {
             utility::LogDebug("Invalid capture, skipping this frame");
             continue;
@@ -197,10 +151,10 @@ int main(int argc, char **argv) {
         vis.UpdateGeometry();
         vis.PollEvents();
         vis.UpdateRender();
+
     } while (!flag_exit);
 
     recorder.CloseRecord();
 
     return 0;
 }
-

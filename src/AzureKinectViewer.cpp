@@ -49,9 +49,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    // 读取传感器配置
     io::AzureKinectSensorConfig sensor_config;
-    // 判断是否指定了传感器配置文件
     if (utility::ProgramOptionExists(argc, argv, "--config")) {
         auto config_filename =
                 utility::GetProgramOptionAsString(argc, argv, "--config", "");
@@ -63,21 +61,18 @@ int main(int argc, char **argv) {
         utility::LogInfo("Use default sensor config");
     }
 
-    // 获取传感器索引
-    int sensor_index = utility::GetProgramOptionAsInt(argc, argv, "--device", 0);
-
-    // 判断传感器索引是否合法
+    int sensor_index =
+            utility::GetProgramOptionAsInt(argc, argv, "--device", 0);
     if (sensor_index < 0 || sensor_index > 255) {
         utility::LogWarning("Sensor index must between [0, 255]: {}",
                             sensor_index);
         return 1;
     }
 
-    // 判断是否对齐深度图
-    bool enable_align_depth_to_color = utility::ProgramOptionExists(argc, argv, "-a");
+    bool enable_align_depth_to_color =
+            utility::ProgramOptionExists(argc, argv, "-a");
 
     // Init sensor
-    // 初始化传感器
     io::AzureKinectSensor sensor(sensor_config);
     if (!sensor.Connect(sensor_index)) {
         utility::LogWarning("Failed to connect to sensor, abort.");
@@ -85,41 +80,32 @@ int main(int argc, char **argv) {
     }
 
     // Start viewing
-    // 开始查看
-    bool flag_exit = false; // 退出标志
-    bool is_geometry_added = false; // 是否添加几何体
-    visualization::VisualizerWithKeyCallback vis;   // 可视化窗口
-    // 注册按键回调函数：按下ESC键退出
+    bool flag_exit = false;
+    bool is_geometry_added = false;
+    visualization::VisualizerWithKeyCallback vis;
     vis.RegisterKeyCallback(GLFW_KEY_ESCAPE,
                             [&](visualization::Visualizer *vis) {
                                 flag_exit = true;
                                 return false;
                             });
 
-    // 创建可视化窗口
     vis.CreateVisualizerWindow("Open3D Azure Kinect Recorder", 1920, 540);
-
-    // 循环获取图像
     do {
-        // 捕获一帧图像
         auto im_rgbd = sensor.CaptureFrame(enable_align_depth_to_color);
-        // 判断图像是否有效
         if (im_rgbd == nullptr) {
             utility::LogInfo("Invalid capture, skipping this frame");
             continue;
         }
 
-        // 添加几何体
-        if (!is_geometry_added) {   // 如果没有添加几何体
-            vis.AddGeometry(im_rgbd);   // 添加几何体：图像
-            is_geometry_added = true;   // 设置已添加几何体
+        if (!is_geometry_added) {
+            vis.AddGeometry(im_rgbd);
+            is_geometry_added = true;
         }
 
         // Update visualizer
-        // 更新可视化窗口
-        vis.UpdateGeometry();   // 更新几何体
-        vis.PollEvents();   // 处理事件
-        vis.UpdateRender(); // 更新渲染
+        vis.UpdateGeometry();
+        vis.PollEvents();
+        vis.UpdateRender();
 
     } while (!flag_exit);
 

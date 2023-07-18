@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.20)
 SET(CMAKE_CXX_STANDARD 17) #Open3D需要C++14以上版本
 SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")
+SET(CMAKE_EXE_LINKER_FLAGS "-lstdc++")
 
 #### AcquiringPointCloud  ####
 # Define project name 
@@ -35,7 +36,12 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 find_package(Open3D REQUIRED)
 include_directories("/usr/local/include/open3d")
 
-add_executable(EmergencyTeleoperatedRobotSystem
+# JSON
+find_package(jsoncpp REQUIRED)
+
+
+
+add_executable(SlamEmergencyTeleoperatedRobotSystem
         src/EmergencyTeleoperatedRobotSystem.cpp 
         src/CasAzureKinectExtrinsics.cpp 
         src/CasSoundSourceLocalization.cpp
@@ -50,6 +56,11 @@ add_executable(EmergencyTeleoperatedRobotSystem
 add_executable(calcQ
         src/calcQ.cpp
         )
+
+add_executable(AKMKVR
+        src/AzureKinectMKVReader.cpp
+        )
+
 
 # add_executable(soundTest
 #         src/soundTest.cpp
@@ -77,7 +88,7 @@ add_executable(CasControlCar
 # 指定头文件目录
 include_directories(include)
 
-target_link_libraries(EmergencyTeleoperatedRobotSystem
+target_link_libraries(SlamEmergencyTeleoperatedRobotSystem
         k4a::k4a
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}
@@ -96,6 +107,14 @@ target_link_libraries(CasControlCar
         ${Protobuf_LIBRARIES}
         ncurses
         )
+
+target_link_libraries(AKMKVR
+    ${Open3D_LIBRARIES}
+    ${Eigen3_LIBRARIES}
+    ${Jsoncpp_LIBRARIES}
+    k4a::k4a
+    jsoncpp
+)
 
 # target_link_libraries(soundTest PRIVATE
 #         k4a::k4a
