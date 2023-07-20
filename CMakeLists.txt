@@ -53,9 +53,9 @@ add_executable(SlamEmergencyTeleoperatedRobotSystem
         ${PROTO_HDRS} 
         )
 
-add_executable(calcQ
-        src/calcQ.cpp
-        )
+# add_executable(calcQ
+#         src/calcQ.cpp
+#         )
 
 add_executable(AKMKVR
         src/AzureKinectMKVReader.cpp
@@ -80,10 +80,10 @@ add_executable(AKMKVR
 #         ${PROTO_HDRS} 
 #         )
 
-add_executable(CasControlCar
-        src/CasControlCar.cpp
-        src/CasBot.cpp
-        )
+# add_executable(CasControlCar
+#         src/CasControlCar.cpp
+#         src/CasBot.cpp
+#         )
 
 # 指定头文件目录
 include_directories(include)
@@ -97,16 +97,16 @@ target_link_libraries(SlamEmergencyTeleoperatedRobotSystem
         fftw3
         )
 
-target_link_libraries(calcQ
-        ${Open3D_LIBRARIES}
-        ${Eigen3_LIBRARIES}
-        )
+# target_link_libraries(calcQ
+#         ${Open3D_LIBRARIES}
+#         ${Eigen3_LIBRARIES}
+#         )
 
-target_link_libraries(CasControlCar 
-        ${Eigen3_LIBRARIES}
-        ${Protobuf_LIBRARIES}
-        ncurses
-        )
+# target_link_libraries(CasControlCar 
+#         ${Eigen3_LIBRARIES}
+#         ${Protobuf_LIBRARIES}
+#         ncurses
+#         )
 
 target_link_libraries(AKMKVR
     ${Open3D_LIBRARIES}

@@ -521,7 +521,8 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     // auto focal_length = intrinsic.GetFocalLength();
     // auto principal_point = intrinsic.GetPrincipalPoint();
     // core::Tensor intrinsic_t = core::Tensor::Init<double>(
-    //     {{focal_length.first, 0, principal_point.first}, {0, focal_length.second, principal_point.second}, {0, 0, 1}});
+    //     {{focal_length.first, 0, principal_point.first}, {0, focal_length.second, principal_point.second}, {0, 0,
+    //     1}});
 
     // 设备类型
     core::Device cuda_ = core::Device("cuda:0");
@@ -554,7 +555,6 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                 // 读取录制的 mkv 文件
                 mkv_reader.Open(mkv_file_path);
 
-
                 intrinsic = mkv_reader.GetMetadata().intrinsics_;
                 auto focal_length = intrinsic.GetFocalLength();
                 auto principal_point = intrinsic.GetPrincipalPoint();
@@ -568,6 +568,8 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                 }
 
                 std::shared_ptr<geometry::RGBDImage> im_rgbd;
+                // int ok = 1;
+                // while (!mkv_reader.IsEOF()) {
                 // 读取第一个有效帧
                 do {
                     im_rgbd = mkv_reader.NextFrame();
@@ -607,18 +609,18 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                         try {
                             result =
                                 model.TrackFrameToModel(input_frame, raycast_frame, depth_scale, depth_max, depth_diff);
-                        } catch (int x) {
-                            --i;
-                            continue;
-                        }
+                            core::Tensor translation = result.transformation_.Slice(0, 0, 3).Slice(1, 3, 4);
+                            double translation_norm = sqrt((translation * translation).Sum({0, 1}).Item<double>());
 
-                        core::Tensor translation = result.transformation_.Slice(0, 0, 3).Slice(1, 3, 4);
-                        double translation_norm = sqrt((translation * translation).Sum({0, 1}).Item<double>());
-
-                        if (result.fitness_ >= 0.1 && translation_norm < 0.15) {
-                            T_frame_to_model = T_frame_to_model.Matmul(result.transformation_);
-                        } else {
+                            if (result.fitness_ >= 0.1 && translation_norm < 0.15) {
+                                T_frame_to_model = T_frame_to_model.Matmul(result.transformation_);
+                            } else {
+                                tracking_success = false;
+                            }
+                        } catch (const runtime_error &e) {
+                            cout << e.what() << endl;
                             tracking_success = false;
+                            --i;
                         }
                     }
 
@@ -626,8 +628,7 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                     if (tracking_success) {
                         model.Integrate(input_frame, depth_scale, depth_max, trunc_voxel_multiplier);
                     }
-                    model.SynthesizeModelFrame(raycast_frame, depth_scale, 0.1, depth_max, trunc_voxel_multiplier,
-                                               false);
+                    model.SynthesizeModelFrame(raycast_frame, depth_scale, 0.1, depth_max, trunc_voxel_multiplier, false);
                 }
 
                 auto des_mesh = model.ExtractTriangleMesh().ToLegacy();
@@ -683,9 +684,9 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                 }
 
                 // FIXME:
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 client.sendExitMeshMessage();
-                need_reconnstrcution = false;
+            need_reconnstrcution = false;
             }
         }
     }

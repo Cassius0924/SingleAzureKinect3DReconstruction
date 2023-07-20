@@ -282,10 +282,17 @@ cas::bot::BotMotor::BotMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME)
 }
 
 bool cas::bot::BotMotor::rotate(string direction) {
-    if (direction == "F" || direction == "R") {
-        this->buffer[1] = direction[0];
-        this->buffer[2] = '1';
+    this->buffer[1] = direction[0];
+    if (direction == "F" ) {
+        this->buffer[2] = '2';
         this->buffer[3] = '0';
+        this->buffer[4] = '0';
+        this->buffer[5] = '0';
+        this->buffer[6] = '0';
+        return STM32::sendData(this->buffer, 9);
+    } else if(direction == "R") {
+        this->buffer[2] = '2';
+        this->buffer[3] = '5';
         this->buffer[4] = '0';
         this->buffer[5] = '0';
         this->buffer[6] = '0';

@@ -1,6 +1,6 @@
 {
     "color_format": "K4A_IMAGE_FORMAT_COLOR_MJPG",
-    "color_resolution": "K4A_COLOR_RESOLUTION_1080P",
+    "color_resolution": "K4A_COLOR_RESOLUTION_720P",
     "depth_delay_off_color_usec": 0,
     "depth_mode": "K4A_DEPTH_MODE_NFOV_UNBINNED",
     "camera_fps": "K4A_FRAMES_PER_SECOND_15",
