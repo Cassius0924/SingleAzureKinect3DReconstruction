@@ -108,7 +108,6 @@ cas::bot::BotArm::BotArm(string serial_port_name = DEFAULT_SERIAL_PORT_NAME) {
     this->fd = open(serial_port_name.c_str(), O_RDWR); // 读写方式打开串口
     if (this->fd < 0) {
         cerr << "机械臂设备连接失败！bot_arm_fd = " << this->fd << endl;
-        cerr << "串口打开失败！" << endl;
         return;
     }
     cout << "机械臂设备连接成功！bot_arm_fd = " << this->fd << endl;
@@ -242,17 +241,16 @@ cas::bot::STM32::STM32(string serial_port_name) {
     this->fd = open(serial_port_name.c_str(), O_RDWR); // 读写方式打开串口
 
     if (this->fd < 0) {
-        cerr << "舵机设备连接失败！motor_fd = " << this->fd << endl;
-        cerr << "串口打开失败！" << endl;
+        cerr << "STM32连接失败！stm32_fd = " << this->fd << endl;
         return;
     }
-    cout << "舵机设备连接成功！motor_fd = " << this->fd << endl;
+    cout << "STM32连接成功！stm32_fd = " << this->fd << endl;
 
     if (tcsetattr(this->fd, TCSADRAIN, &newtio) != 0) {
         cerr << "串口初始化失败！" << endl;
         return;
     }
-    cout << "舵机设备初始化成功！" << endl;
+    cout << "STM32设备初始化成功！" << endl;
 }
 
 bool cas::bot::STM32::sendData(unsigned char *send_buffer, const int send_length) {
@@ -283,14 +281,14 @@ cas::bot::BotMotor::BotMotor(string serial_port_name = DEFAULT_SERIAL_PORT_NAME)
 
 bool cas::bot::BotMotor::rotate(string direction) {
     this->buffer[1] = direction[0];
-    if (direction == "F" ) {
+    if (direction == "F") {
         this->buffer[2] = '2';
-        this->buffer[3] = '0';
+        this->buffer[3] = '5';
         this->buffer[4] = '0';
         this->buffer[5] = '0';
         this->buffer[6] = '0';
         return STM32::sendData(this->buffer, 9);
-    } else if(direction == "R") {
+    } else if (direction == "R") {
         this->buffer[2] = '2';
         this->buffer[3] = '5';
         this->buffer[4] = '0';
@@ -388,8 +386,48 @@ bool cas::bot::BotMotor::rotate(string direction) {
 //     return true;
 // }
 
-cas::bot::BotCar::BotCar(string serial_port_name, const char speed_value, float scale) : STM32(serial_port_name) {
+cas::bot::BotCar::BotCar(string serial_port_name, const char speed_value, float scale) {
+    struct termios newtio;
+    tcgetattr(this->fd, &newtio);
+    newtio.c_cflag &= ~CSIZE;
+    newtio.c_cflag = B115200;
+    newtio.c_cflag |= CS8;   
+    newtio.c_cflag |= CLOCAL | CREAD;
+    newtio.c_iflag &= ~(IXON | IXOFF | IXANY);
+    newtio.c_oflag &= ~OPOST;
+    newtio.c_lflag &=
+        ~(ICANON | ECHO | ECHOE | ISIG);
+    newtio.c_cc[VMIN] = 1;
+    newtio.c_cc[VTIME] = 0;
+    this->fd = open(serial_port_name.c_str(), O_RDWR);
+
+    if (this->fd < 0) {
+        cerr << "底盘车设备连接失败！bot_car_fd = " << this->fd << endl;
+        cerr << "串口打开失败！" << endl;
+        return;
+    }
+    cout << "底盘车设备连接成功！bot_car_fd = " << this->fd << endl;
+
+    if (tcsetattr(this->fd, TCSADRAIN, &newtio) != 0) {
+        cerr << "串口初始化失败！" << endl;
+        return;
+    }
+    cout << "底盘车设备初始化成功！" << endl;
     setSpeed(speed_value, scale);
+}
+
+bool cas::bot::BotCar::sendData(unsigned char *send_buffer, const int send_length) {
+    if (write(this->fd, send_buffer, send_length) < 0) {
+        return false;
+    }
+    return true;
+}
+
+int cas::bot::BotCar::recvData(unsigned char *recv_buffer, const int recv_length) {
+    int len = -1;
+    while ((len = read(this->fd, recv_buffer, recv_length)) < 0)
+        ;
+    return len;
 }
 
 /**
@@ -437,7 +475,7 @@ void cas::bot::BotCar::setSpeed(const char speed_value, float scale) {
 bool cas::bot::BotCar::moveForward() {
     this->buffer[4] = 0x01;
     this->buffer[5] = 0x01;
-    return STM32::sendData(this->buffer, 10);
+    return sendData(this->buffer, 10);
 }
 bool cas::bot::BotCar::moveForwardTime(float time_s) {
     // cout << "time_s = " << time_s << endl;
@@ -461,7 +499,7 @@ bool cas::bot::BotCar::moveForwardDistance(float distance) {
 bool cas::bot::BotCar::moveBackward() {
     this->buffer[4] = 0x00;
     this->buffer[5] = 0x00;
-    return STM32::sendData(this->buffer, 10);
+    return sendData(this->buffer, 10);
 }
 bool cas::bot::BotCar::moveBackwardTime(float time_s) {
     if (!moveBackward()) {
@@ -482,7 +520,7 @@ bool cas::bot::BotCar::moveBackwardDistance(float distance) {
 bool cas::bot::BotCar::turnLeft() {
     this->buffer[4] = 0x00;
     this->buffer[5] = 0x01;
-    return STM32::sendData(this->buffer, 10);
+    return sendData(this->buffer, 10);
 }
 bool cas::bot::BotCar::turnLeftTime(float time_s) {
     cout << "time_s = " << time_s << endl;
@@ -502,7 +540,7 @@ bool cas::bot::BotCar::turnLeftAngle(float angle) {
 bool cas::bot::BotCar::turnRight() {
     this->buffer[4] = 0x01;
     this->buffer[5] = 0x00;
-    return STM32::sendData(this->buffer, 10);
+    return sendData(this->buffer, 10);
 }
 
 bool cas::bot::BotCar::turnRightTime(float time_s) {
@@ -531,14 +569,14 @@ bool cas::bot::BotCar::turnAngle(float angle) {
 bool cas::bot::BotCar::autoTurnByAngle(float angle) {
     if (angle > 0) {
         this->buffer2[4] = 0x01; // 大于0左转，小于0右转
-        this->buffer2[5] = (int)angle - 1;
+        this->buffer2[5] = (int)angle - 2;
     } else if (angle < 0) {
         this->buffer2[4] = 0x02; // 大于0左转，小于0右转
-        this->buffer2[5] = -(int)angle - 1;
+        this->buffer2[5] = -(int)angle - 2;
     } else {
         return false;
     }
-    return STM32::sendData(this->buffer2, 10);
+    return sendData(this->buffer2, 10);
 }
 
 bool cas::bot::BotCar::autoTurnByAngleAndSpeed(float angle, char left_speed_value, char right_speed_value) {
@@ -559,7 +597,7 @@ bool cas::bot::BotCar::stopCar() {
     int right_temp = this->buffer[3];
     this->buffer[2] = 0x00;
     this->buffer[3] = 0x00;
-    if (!STM32::sendData(this->buffer, 10)) {
+    if (!sendData(this->buffer, 10)) {
         return false;
     }
     this->buffer[2] = left_temp;
@@ -600,4 +638,15 @@ bool cas::bot::BotCar::executeMoveSequence(float *seq, int seq_length) {
         return false;
     }
     return true;
+}
+
+cas::bot::BotLed::BotLed(string serial_port_name) {
+    this->buffer[0] = '@';
+    this->buffer[2] = '\r';
+    this->buffer[3] = '\n';
+}
+
+bool cas::bot::BotLed::setLedColor(LedColor color) {
+    this->buffer[1] = color;
+    return STM32::sendData(this->buffer, 4);
 }

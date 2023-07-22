@@ -40,8 +40,7 @@ include_directories("/usr/local/include/open3d")
 find_package(jsoncpp REQUIRED)
 
 
-
-add_executable(SlamEmergencyTeleoperatedRobotSystem
+add_executable(AllSlamEmergencyTeleoperatedRobotSystem
         src/EmergencyTeleoperatedRobotSystem.cpp 
         src/CasAzureKinectExtrinsics.cpp 
         src/CasSoundSourceLocalization.cpp
@@ -53,42 +52,15 @@ add_executable(SlamEmergencyTeleoperatedRobotSystem
         ${PROTO_HDRS} 
         )
 
-# add_executable(calcQ
-#         src/calcQ.cpp
-#         )
-
-add_executable(AKMKVR
-        src/AzureKinectMKVReader.cpp
+add_executable(CasControlCar
+        src/CasControlCar.cpp
+        src/CasBot.cpp
         )
-
-
-# add_executable(soundTest
-#         src/soundTest.cpp
-#         src/CasAzureKinect.cpp
-#         src/CasBot.cpp
-
-#         src/CasSoundSourceLocalization.cpp
-#         ${PROTO_SRCS} 
-#         ${PROTO_HDRS} 
-#         )
-
-# add_executable(TcpTest
-#         src/TcpTest.cpp
-#         src/CasNetwork.cpp
-#         src/CasBot.cpp
-#         ${PROTO_SRCS} 
-#         ${PROTO_HDRS} 
-#         )
-
-# add_executable(CasControlCar
-#         src/CasControlCar.cpp
-#         src/CasBot.cpp
-#         )
 
 # 指定头文件目录
 include_directories(include)
 
-target_link_libraries(SlamEmergencyTeleoperatedRobotSystem
+target_link_libraries(AllSlamEmergencyTeleoperatedRobotSystem
         k4a::k4a
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}
@@ -97,40 +69,10 @@ target_link_libraries(SlamEmergencyTeleoperatedRobotSystem
         fftw3
         )
 
-# target_link_libraries(calcQ
-#         ${Open3D_LIBRARIES}
-#         ${Eigen3_LIBRARIES}
-#         )
-
-# target_link_libraries(CasControlCar 
-#         ${Eigen3_LIBRARIES}
-#         ${Protobuf_LIBRARIES}
-#         ncurses
-#         )
-
-target_link_libraries(AKMKVR
-    ${Open3D_LIBRARIES}
-    ${Eigen3_LIBRARIES}
-    ${Jsoncpp_LIBRARIES}
-    k4a::k4a
-    jsoncpp
-)
-
-# target_link_libraries(soundTest PRIVATE
-#         k4a::k4a
-#         asound
-#         ${Open3D_LIBRARIES}
-#         ${Protobuf_LIBRARIES}
-#         ${Eigen3_LIBRARIES}
-#         fftw3
-#         )
-
-# target_link_libraries(TcpTest PRIVATE
-#         asound
-#         ${Open3D_LIBRARIES}
-#         ${Protobuf_LIBRARIES}
-#         ${Eigen3_LIBRARIES}
-#         )
+target_link_libraries(CasControlCar
+        ncurses
+        )
+        
 
 
 

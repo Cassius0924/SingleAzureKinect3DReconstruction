@@ -11,7 +11,7 @@ using namespace std;
 
 int main() {
     // 控制小车移动
-    cas::bot::BotCar bot_car("/dev/ttyUSB1", (char)0x10);
+    cas::bot::BotCar bot_car("/dev/ttyUSB1", (char)0x12, 0.62);
     // int fd = cas::bot::initBotCar("/dev/ttyUSB1");
 
     unsigned char buffer[10] = {0};
@@ -53,7 +53,7 @@ int main() {
         ch = getch(); // 获取按下的键值
         if (ch == 'w' || ch == 'W') {
             std::cout << "向前移动" << std::endl;
-            bot_car.moveForwardDistance(10);
+            bot_car.moveForwardDistance(80);
         } else if (ch == 'a' || ch == 'A') {
             std::cout << "向左转动" << std::endl;
             // bot_car.turnLeftAngle(45);

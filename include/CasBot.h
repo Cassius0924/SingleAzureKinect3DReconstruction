@@ -59,7 +59,7 @@ namespace cas {
                 FREE_MODE = 0x1A,
                 SEND_ANGLE = 0x22,
                 SEND_COORD = 0x25,
-                SEND_GRIPPER_ANGLE= 0x67,
+                SEND_GRIPPER_ANGLE = 0x67,
             };
             enum DataSet {
                 ALL_ANGLE = 0x20,
@@ -96,8 +96,11 @@ namespace cas {
             bool rotate(string direction);
         };
 
-        class BotCar : virtual public STM32 {
+
+
+        class BotCar{
         private:
+            int fd;
             float speed;
             float angle_speed;
             unsigned char buffer[10];
@@ -105,6 +108,8 @@ namespace cas {
 
         public:
             BotCar(string serial_port_name, const char speed_value, float scale = 1.0f);
+            bool sendData(unsigned char *send_buffer, const int send_length);
+            int recvData(unsigned char *recv_buffer, const int recv_length);
             void setSpeed(const char speed_value, float scale = 1.0);
             bool moveForward();
             bool moveForwardTime(float time);
@@ -123,6 +128,18 @@ namespace cas {
             bool autoTurnByAngleAndSpeed(float angle, char left_speed_value, char right_speed_value);
             bool stopCar();
             bool executeMoveSequence(float *seq, int seq_length);
+        };
+
+        class BotLed : virtual public STM32 {
+        private:
+            unsigned char buffer[4];
+        public:
+            enum LedColor {
+                RED = 'E',
+                GREEN = 'G',
+            };
+            BotLed(string serial_port_name);
+            bool setLedColor(LedColor color);
         };
     } // namespace bot
 } // namespace cas
