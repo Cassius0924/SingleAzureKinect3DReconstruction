@@ -40,7 +40,7 @@ include_directories("/usr/local/include/open3d")
 find_package(jsoncpp REQUIRED)
 
 
-add_executable(AllSlamEmergencyTeleoperatedRobotSystem
+add_executable(AllSlamNoMKVEmergencyTeleoperatedRobotSystem
         src/EmergencyTeleoperatedRobotSystem.cpp 
         src/CasAzureKinectExtrinsics.cpp 
         src/CasSoundSourceLocalization.cpp
@@ -60,7 +60,7 @@ add_executable(CasControlCar
 # 指定头文件目录
 include_directories(include)
 
-target_link_libraries(AllSlamEmergencyTeleoperatedRobotSystem
+target_link_libraries(AllSlamNoMKVEmergencyTeleoperatedRobotSystem
         k4a::k4a
         ${Open3D_LIBRARIES}
         ${Eigen3_LIBRARIES}

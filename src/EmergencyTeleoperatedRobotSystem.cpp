@@ -135,7 +135,7 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     mutex client_mutex;
     mutex stm32_mutex;
     mutex car_mutex;
-    mutex timer_mutex;
+    mutex recon_mutex;
 
     // 定义条件变量
     condition_variable arm_cv;
@@ -147,22 +147,13 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     bool need_break = false;
 
     bool need_reconnstrcution = true;
-    bool flag_recording = false;
+    bool flag_recording = true;
 
     // int camera_task_count = 0;
     // int cloud_task_count = 0;
     // bool arm_finished = false;
 
     // cas::EulerAngle cur_angle(0, 0, 0);
-
-    // thread timer_thread([&]() {
-    //     unique_lock<mutex> lock(timer_mutex);
-    //     while (true) {
-    //         timer_cv.wait(lock);
-    //     }
-    //     this_thread::sleep_for(std::chrono::milliseconds(5000));
-    //     flag_recording = true;
-    // });
 
     // 定义相机线程
     // thread camera_thread([&]() {
@@ -376,7 +367,8 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                     //     }
                     // }
 
-                    flag_recording = false;
+                    unique_lock<mutex> lock(recon_mutex);
+                    flag_recording = true;
                     need_reconnstrcution = true;
                     break;
                 }
@@ -440,7 +432,7 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                     if (stm32_buffer[4] == 'D' && stm32_buffer[5] == 'O' && stm32_buffer[6] == 'N' &&
                         stm32_buffer[7] == 'E') {
                         cout << "舵机旋转完成" << endl;
-                        flag_recording = true;
+                        flag_recording = false;
                     }
                     // "M$F DONE", "M$R DONE"
                     // 舵机旋转反馈
@@ -502,11 +494,14 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     io::AzureKinectSensorConfig sensor_config;
     string azure_kinect_config_file = "../azure_kinect_sensor_conf.json";
     io::ReadIJsonConvertibleFromJSON(azure_kinect_config_file, sensor_config);
-    io::AzureKinectRecorder recorder(sensor_config, 0);
-    if (!recorder.InitSensor()) {
-        cerr << "初始化相机失败!" << endl;
-        return -
-    }
+    io::AzureKinectSensor sensor(sensor_config);
+    // io::AzureKinectRecorder recorder(sensor_config, 0);
+    // if (!recorder.InitSensor()) {
+    //     cerr << "初始化相机失败!" << endl;
+    //     return -1;
+    // }
+
+    sensor.Connect(0);
     cout << "初始化成功" << endl;
 
     while (true) {
@@ -514,208 +509,215 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
             continue;
         }
 
-        {
-            io::MKVReader mkv_reader;
-            cout << "1" << endl;
-            // 初始化 Kinect 相机
-            // 此次录制文件夹
-            string recording_folder_path = RECORDINGS_FOLDER_PATH + "recording_" + utility::GetCurrentTimeStamp() + "/";
-            utility::filesystem::MakeDirectoryHierarchy(recording_folder_path); // 创建此次录制文件夹
-            string recording_file_name = "recon_" + utility::GetCurrentTimeStamp() + ".mkv";
-            cout << "2" << endl;
-            // MKV 文件路径
-            string mkv_file_path = recording_folder_path + recording_file_name;
-            cout << "3" << endl;
+        this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-            // 开始录制
-            recorder.OpenRecord(mkv_file_path);
-            cout << "4" << endl;
+        // io::MKVReader mkv_reader;
+        // cout << "1" << endl;
+        // // 初始化 Kinect 相机
+        // // 此次录制文件夹
+        // string recording_folder_path = RECORDINGS_FOLDER_PATH + "recording_" + utility::GetCurrentTimeStamp() +
+        // "/"; utility::filesystem::MakeDirectoryHierarchy(recording_folder_path); // 创建此次录制文件夹 string
+        // recording_file_name = "recon_" + utility::GetCurrentTimeStamp() + ".mkv"; cout << "2" << endl;
+        // // MKV 文件路径
+        // string mkv_file_path = recording_folder_path + recording_file_name;
+        // cout << "3" << endl;
 
-            if (bot_motor.rotate(FIRST_MOTOR_ROTATION)) {
-                cout << "舵机旋转成功" << endl;
-                if (FIRST_MOTOR_ROTATION == "F") {
-                    FIRST_MOTOR_ROTATION = "R";
-                    program_config.set("first_motor_rotation", "R");
-                } else if (FIRST_MOTOR_ROTATION == "R") {
-                    FIRST_MOTOR_ROTATION = "F";
-                    program_config.set("first_motor_rotation", "F");
-                } else {
-                    cerr << "未知的舵机旋转方向！" << endl;
-                }
+        // // 开始录制
+        // recorder.OpenRecord(mkv_file_path);
+        // cout << "4" << endl;
+
+        if (bot_motor.rotate(FIRST_MOTOR_ROTATION)) {
+            cout << "舵机旋转成功" << endl;
+            if (FIRST_MOTOR_ROTATION == "F") {
+                FIRST_MOTOR_ROTATION = "R";
+                program_config.set("first_motor_rotation", "R");
+            } else if (FIRST_MOTOR_ROTATION == "R") {
+                FIRST_MOTOR_ROTATION = "F";
+                program_config.set("first_motor_rotation", "F");
+            } else {
+                cerr << "未知的舵机旋转方向！" << endl;
             }
+        }
 
-            while (true) {
-                // true 表示开始录制
-                auto im_rgbd = recorder.RecordFrame(true, enable_align_depth_to_color);
-                if (im_rgbd == nullptr) {
-                    cerr << "获取图像失败! 跳过此帧" << endl;
+        while (true) {
+            // true 表示开始录制
+            // auto im_rgbd = recorder.RecordFrame(true, enable_align_depth_to_color);
+            // if (im_rgbd == nullptr) {
+            //     cerr << "获取图像失败! 跳过此帧" << endl;
+            //     continue;
+            // }
+
+            // if (flag_recording) {
+            // TODO: 可以封装
+            // if (recorder.IsRecordCreated()) {
+            //     cout << "录制完毕" << endl;
+            // } else {
+            //     cerr << "录制失败！" << endl;
+            //     return -1;
+            // }
+            // // 完成一次重建录制，关闭相机
+            // recorder.CloseRecord();
+            // recorder.~AzureKinectRecorder();
+
+            // 读取 mkv 文件中的数据
+
+            // FIXME: 不需要保存成文件
+            // utility::filesystem::MakeDirectory(mkv_parse_folder_path + "/color");
+            // utility::filesystem::MakeDirectory(mkv_parse_folder_path + "/depth");
+
+            // 读取录制的 mkv 文件
+            // mkv_reader.Open(mkv_file_path);
+
+            // intrinsic = mkv_reader.GetMetadata().intrinsics_;
+            // auto focal_length = intrinsic.GetFocalLength();
+            // auto principal_point = intrinsic.GetPrincipalPoint();
+            // core::Tensor intrinsic_t =
+            //     core::Tensor::Init<double>({{focal_length.first, 0, principal_point.first},
+            //                                 {0, focal_length.second, principal_point.second},
+            //                                 {0, 0, 1}});
+
+            core::Tensor intrinsic_t =
+                core::Tensor::Init<double>({{963.205, 0, 1012.87}, {0, 962.543, 777.369}, {0, 0, 1}});
+
+            // if (!mkv_reader.IsOpened()) { // 打开失败
+            //     cerr << "打开 MKV 文件失败！" << endl;
+            //     return -1;
+            // }
+
+            std::shared_ptr<geometry::RGBDImage> im_rgbd;
+
+            // 读取第一个有效帧
+            do {
+                im_rgbd = sensor.CaptureFrame(true);
+            } while (im_rgbd == nullptr);
+
+            // 初始化 SLAM 模型
+            core::Tensor T_frame_to_model = core::Tensor::Eye(4, core::Dtype::Float64, core::Device("CPU:0"));
+            t::pipelines::slam::Model model(voxel_size, block_resolution, block_count, T_frame_to_model, cuda_);
+
+            // 读取深度图像帧
+            // 使用t::geometry::Image的静态方法FromLegacy，将geometry::Image转换为t::geometry::Image
+            t::geometry::Image ref_depth = t::geometry::Image::FromLegacy(im_rgbd->depth_, cuda_);
+            t::pipelines::slam::Frame input_frame(ref_depth.GetRows(), ref_depth.GetCols(), intrinsic_t, cuda_);
+            t::pipelines::slam::Frame raycast_frame(ref_depth.GetRows(), ref_depth.GetCols(), intrinsic_t, cuda_);
+            cout << "%6" << endl;
+
+            int i = 0;
+            // 循环读取mkv文件
+            while (flag_recording) {
+                // TODO: 保存成 MKV 解析文件
+
+                cout << "处理中：" << i << endl;
+
+                // 读取一帧
+                // auto im_rgbd = mkv_reader.NextFrame();
+
+                im_rgbd = sensor.CaptureFrame(true);
+
+                if (im_rgbd == nullptr) { // 读取失败则跳过
                     continue;
                 }
 
-                if (flag_recording) {
-                    // TODO: 可以封装
-                    if (recorder.IsRecordCreated()) {
-                        cout << "录制完毕" << endl;
-                    } else {
-                        cerr << "录制失败！" << endl;
-                        return -1;
-                    }
-                    // 完成一次重建录制，关闭相机
-                    recorder.CloseRecord();
-                    // recorder.~AzureKinectRecorder();
+                input_frame.SetDataFromImage("depth", t::geometry::Image::FromLegacy(im_rgbd->depth_, cuda_));
+                input_frame.SetDataFromImage("color", t::geometry::Image::FromLegacy(im_rgbd->color_, cuda_));
 
-                    // 读取 mkv 文件中的数据
+                // 里程计跟踪
+                bool tracking_success = true;
 
-                    // FIXME: 不需要保存成文件
-                    // utility::filesystem::MakeDirectory(mkv_parse_folder_path + "/color");
-                    // utility::filesystem::MakeDirectory(mkv_parse_folder_path + "/depth");
+                if (i > 0) {
+                    t::pipelines::odometry::OdometryResult result;
+                    try {
+                        result =
+                            model.TrackFrameToModel(input_frame, raycast_frame, depth_scale, depth_max, depth_diff);
+                        core::Tensor translation = result.transformation_.Slice(0, 0, 3).Slice(1, 3, 4);
+                        double translation_norm = sqrt((translation * translation).Sum({0, 1}).Item<double>());
 
-                    // 读取录制的 mkv 文件
-                    mkv_reader.Open(mkv_file_path);
-
-                    intrinsic = mkv_reader.GetMetadata().intrinsics_;
-                    auto focal_length = intrinsic.GetFocalLength();
-                    auto principal_point = intrinsic.GetPrincipalPoint();
-                    core::Tensor intrinsic_t =
-                        core::Tensor::Init<double>({{focal_length.first, 0, principal_point.first},
-                                                    {0, focal_length.second, principal_point.second},
-                                                    {0, 0, 1}});
-
-                    if (!mkv_reader.IsOpened()) { // 打开失败
-                        cerr << "打开 MKV 文件失败！" << endl;
-                        return -1;
-                    }
-
-                    std::shared_ptr<geometry::RGBDImage> im_rgbd;
-                    // 读取第一个有效帧
-                    do {
-                        im_rgbd = mkv_reader.NextFrame();
-                    } while (im_rgbd == nullptr);
-
-                    // 初始化 SLAM 模型
-                    core::Tensor T_frame_to_model = core::Tensor::Eye(4, core::Dtype::Float64, core::Device("CPU:0"));
-                    t::pipelines::slam::Model model(voxel_size, block_resolution, block_count, T_frame_to_model, cuda_);
-
-                    // 读取深度图像帧
-                    // 使用t::geometry::Image的静态方法FromLegacy，将geometry::Image转换为t::geometry::Image
-                    t::geometry::Image ref_depth = t::geometry::Image::FromLegacy(im_rgbd->depth_, cuda_);
-                    t::pipelines::slam::Frame input_frame(ref_depth.GetRows(), ref_depth.GetCols(), intrinsic_t, cuda_);
-                    t::pipelines::slam::Frame raycast_frame(ref_depth.GetRows(), ref_depth.GetCols(), intrinsic_t,
-                                                            cuda_);
-
-                    int i = 0;
-                    // 循环读取mkv文件
-                    while (!mkv_reader.IsEOF()) {
-                        // TODO: 保存成 MKV 解析文件
-
-                        cout << "处理中：" << i << endl;
-                        // 读取一帧
-                        auto im_rgbd = mkv_reader.NextFrame();
-
-                        if (im_rgbd == nullptr) { // 读取失败则跳过
-                            continue;
+                        if (result.fitness_ >= 0.1 && translation_norm < 0.15) {
+                            T_frame_to_model = T_frame_to_model.Matmul(result.transformation_);
+                        } else {
+                            tracking_success = false;
+                            cout << "失败啦！" << endl;
                         }
-
-                        input_frame.SetDataFromImage("depth", t::geometry::Image::FromLegacy(im_rgbd->depth_, cuda_));
-                        input_frame.SetDataFromImage("color", t::geometry::Image::FromLegacy(im_rgbd->color_, cuda_));
-
-                        // 里程计跟踪
-                        bool tracking_success = true;
-
-                        if (i++ > 0) {
-                            t::pipelines::odometry::OdometryResult result;
-                            try {
-                                result = model.TrackFrameToModel(input_frame, raycast_frame, depth_scale, depth_max,
-                                                                 depth_diff);
-                                core::Tensor translation = result.transformation_.Slice(0, 0, 3).Slice(1, 3, 4);
-                                double translation_norm = sqrt((translation * translation).Sum({0, 1}).Item<double>());
-
-                                if (result.fitness_ >= 0.1 && translation_norm < 0.15) {
-                                    T_frame_to_model = T_frame_to_model.Matmul(result.transformation_);
-                                } else {
-                                    tracking_success = false;
-                                    cout << "失败啦！" << endl;
-                                }
-                            } catch (const runtime_error &e) {
-                                cout << e.what() << endl;
-                                tracking_success = false;
-                                --i;
-                            }
-                        }
-
-                        model.UpdateFramePose(i, T_frame_to_model);
-                        if (tracking_success) {
-                            model.Integrate(input_frame, depth_scale, depth_max, trunc_voxel_multiplier);
-                        }
-                        model.SynthesizeModelFrame(raycast_frame, depth_scale, 0.1, depth_max, trunc_voxel_multiplier,
-                                                   false);
+                        cout << "fitness: " << result.fitness_ << "， translation_norm: " << translation_norm << endl;
+                    } catch (const runtime_error &e) {
+                        cout << e.what() << endl;
+                        tracking_success = false;
+                        --i;
                     }
-
-                    // mkv_reader.Close();
-                    // mkv_reader.~MKVReader();
-                    auto des_mesh = model.ExtractTriangleMesh().ToLegacy();
-                    model.~Model();
-                    io::WriteTriangleMesh("ply/slam_mesh.ply", des_mesh);
-
-                    if (IS_CREATE_SERVER) {
-                        cout << "开始发送数据" << endl;
-                        cas::proto::DataMessage data_message;
-                        // 设置消息类型
-                        data_message.set_type(cas::proto::DataMessage::MESH);
-                        cas::proto::Mesh *mesh_message = data_message.mutable_mesh();
-                        // 顶点坐标
-                        const vector<Eigen::Vector3d> &vertices = des_mesh.vertices_;
-                        // 顶点索引
-                        const vector<Eigen::Vector3i> &triangles = des_mesh.triangles_;
-                        // 顶点颜色
-                        const vector<Eigen::Vector3d> &colors = des_mesh.vertex_colors_;
-
-                        int write_count = 0;
-                        for (int i = 0; i < triangles.size(); i++) {
-                            cas::proto::V1 *v1 = mesh_message->add_v1();
-                            int v1_index = triangles[i][0];
-                            v1->set_x(vertices[v1_index][0]);
-                            v1->set_y(vertices[v1_index][1]);
-                            v1->set_z(vertices[v1_index][2]);
-
-                            cas::proto::V2 *v2 = mesh_message->add_v2();
-                            int v2_index = triangles[i][1];
-                            v2->set_x(vertices[v2_index][0]);
-                            v2->set_y(vertices[v2_index][1]);
-                            v2->set_z(vertices[v2_index][2]);
-
-                            cas::proto::V3 *v3 = mesh_message->add_v3();
-                            int v3_index = triangles[i][2];
-                            v3->set_x(vertices[v3_index][0]);
-                            v3->set_y(vertices[v3_index][1]);
-                            v3->set_z(vertices[v3_index][2]);
-
-                            mesh_message->add_r((colors[v1_index][0] + colors[v2_index][0] + colors[v3_index][0]) /
-                                                3.0);
-                            mesh_message->add_g((colors[v1_index][1] + colors[v2_index][1] + colors[v3_index][1]) /
-                                                3.0);
-                            mesh_message->add_b((colors[v1_index][2] + colors[v2_index][2] + colors[v3_index][2]) /
-                                                3.0);
-
-                            if ((i + 1) % 500 == 0 || i == (triangles.size() - 1)) {
-                                unique_lock<mutex> lock(client_mutex);
-                                client.sendMessage(data_message);
-                                mesh_message->Clear();
-                                write_count++;
-                            }
-                            cout << "\r已发送：" << write_count << flush;
-                        }
-                        cout << "===============================" << endl;
-                        cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
-                        cout << "== 面片数量: " << triangles.size() << endl;
-                        cout << "===============================" << endl;
-                    }
-                    client.sendExitMeshMessage();
-                    need_reconnstrcution = false;
-
-                    break;
                 }
+
+                model.UpdateFramePose(i, T_frame_to_model);
+                if (tracking_success) {
+                    model.Integrate(input_frame, depth_scale, depth_max, trunc_voxel_multiplier);
+                }
+                model.SynthesizeModelFrame(raycast_frame, depth_scale, 0.1, depth_max, trunc_voxel_multiplier, false);
+                i++;
             }
+
+            // sensor.Disconnect();
+
+            // mkv_reader.Close();
+            // mkv_reader.~MKVReader();
+            auto des_mesh = model.ExtractTriangleMesh().ToLegacy();
+            model.~Model();
+            io::WriteTriangleMesh("ply/slam_mesh.ply", des_mesh);
+
+            if (IS_CREATE_SERVER) {
+                cout << "开始发送数据" << endl;
+                cas::proto::DataMessage data_message;
+                // 设置消息类型
+                data_message.set_type(cas::proto::DataMessage::MESH);
+                cas::proto::Mesh *mesh_message = data_message.mutable_mesh();
+                // 顶点坐标
+                const vector<Eigen::Vector3d> &vertices = des_mesh.vertices_;
+                // 顶点索引
+                const vector<Eigen::Vector3i> &triangles = des_mesh.triangles_;
+                // 顶点颜色
+                const vector<Eigen::Vector3d> &colors = des_mesh.vertex_colors_;
+
+                int write_count = 0;
+                for (int i = 0; i < triangles.size(); i++) {
+                    cas::proto::V1 *v1 = mesh_message->add_v1();
+                    int v1_index = triangles[i][0];
+                    v1->set_x(vertices[v1_index][0]);
+                    v1->set_y(vertices[v1_index][1]);
+                    v1->set_z(vertices[v1_index][2]);
+
+                    cas::proto::V2 *v2 = mesh_message->add_v2();
+                    int v2_index = triangles[i][1];
+                    v2->set_x(vertices[v2_index][0]);
+                    v2->set_y(vertices[v2_index][1]);
+                    v2->set_z(vertices[v2_index][2]);
+
+                    cas::proto::V3 *v3 = mesh_message->add_v3();
+                    int v3_index = triangles[i][2];
+                    v3->set_x(vertices[v3_index][0]);
+                    v3->set_y(vertices[v3_index][1]);
+                    v3->set_z(vertices[v3_index][2]);
+
+                    mesh_message->add_r((colors[v1_index][0] + colors[v2_index][0] + colors[v3_index][0]) / 3.0);
+                    mesh_message->add_g((colors[v1_index][1] + colors[v2_index][1] + colors[v3_index][1]) / 3.0);
+                    mesh_message->add_b((colors[v1_index][2] + colors[v2_index][2] + colors[v3_index][2]) / 3.0);
+
+                    if ((i + 1) % 500 == 0 || i == (triangles.size() - 1)) {
+                        unique_lock<mutex> lock(client_mutex);
+                        client.sendMessage(data_message);
+                        mesh_message->Clear();
+                        write_count++;
+                    }
+                    cout << "\r已发送：" << write_count << flush;
+                }
+                cout << "===============================" << endl;
+                cout << "== 发送完毕. 一共发送了 " << write_count << " 次" << endl;
+                cout << "== 面片数量: " << triangles.size() << endl;
+                cout << "===============================" << endl;
+            }
+            client.sendExitMeshMessage();
+            flag_recording = true;
+            need_reconnstrcution = false;
+
+            break;
+            // }
         }
     }
     return 1;

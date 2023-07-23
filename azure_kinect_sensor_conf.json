@@ -3,7 +3,7 @@
     "color_resolution": "K4A_COLOR_RESOLUTION_1536P",
     "depth_delay_off_color_usec": 0,
     "depth_mode": "K4A_DEPTH_MODE_NFOV_UNBINNED",
-    "camera_fps": "K4A_FRAMES_PER_SECOND_15",
+    "camera_fps": "K4A_FRAMES_PER_SECOND_30",
     "wired_sync_mode": "K4A_WIRED_SYNC_MODE_STANDALONE",
     "disable_streaming_indicator": "false",
     "synchronized_images_only": "true",
