@@ -9,6 +9,7 @@ import "BotGripper.proto";
 import "BotMotor.proto";
 import "BotArm.proto";
 import "BotLed.proto";
+import "KinectMode.proto";
 
 message DataMessage {
     enum Type {
@@ -22,6 +23,7 @@ message DataMessage {
         BOT_ARM = 6;
         BOT_LED = 7;
         TEMP_AND_HUMI = 8;
+        KINECT_MODE= 9;
     }
     Type type = 1;
     oneof data {
@@ -33,5 +35,6 @@ message DataMessage {
         BotArm bot_arm = 7;
         BotLed bot_led = 8;
         TempAndHumi temp_and_humi = 9;
+        KinectMode kinect_mode = 10;
     }
 }

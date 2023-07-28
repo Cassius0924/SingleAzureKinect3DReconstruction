@@ -2,5 +2,9 @@ syntax = "proto3";
 package cas.proto;
 
 message BotArm{
+    enum Mode{
+        Angle = 0;
+        COORDINATE = 1;
+    }
     bytes data_buffer = 1;
 }

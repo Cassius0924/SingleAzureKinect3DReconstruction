@@ -13,31 +13,25 @@
 using namespace std;
 using namespace cas::ssl;
 
-SoundSourceDetector::SoundSourceDetector(unsigned int smaple_rate = 44100,
-                                         const int samples = 2205,
-                                         const int channels = 7,
-                                         string microphone_name = "plughw:2,0") : sample_rate(smaple_rate),
-                                                                                  samples(samples),
-                                                                                  channels(channels),
-                                                                                  microphone_name(microphone_name){};
+SoundSourceDetector::SoundSourceDetector(unsigned int smaple_rate = 44100, const int samples = 2205,
+                                         const int channels = 7, string microphone_name = "plughw:2,0")
+    : sample_rate(smaple_rate), samples(samples), channels(channels), microphone_name(microphone_name){};
 
-SoundSourceDetector::~SoundSourceDetector() {
-    stop();
-};
+SoundSourceDetector::~SoundSourceDetector() { stop(); };
 
 bool SoundSourceDetector::start() {
-    this->format = SND_PCM_FORMAT_FLOAT_LE;// 数据格式为float类型
+    this->format = SND_PCM_FORMAT_FLOAT_LE; // 数据格式为float类型
     this->period_size = 256;
     this->fmt_size = 4;
 
     // 打开Azure Kinect的麦克风阵列
     if (snd_pcm_open(&this->pcm_handle, this->microphone_name.c_str(), SND_PCM_STREAM_CAPTURE, 0) < 0) {
-        cerr << "错误：无法打开麦克风阵列。" << endl;
+        Debug::CoutError("无法打开麦克风阵列。");
         return false;
     }
 
     if (snd_pcm_sw_params_malloc(&this->sw_params) < 0) {
-        cerr << "错误：无法分配软件参数结构。" << endl;
+        Debug::CoutError("无法分配软件参数结构。");
         return false;
     }
 
@@ -45,61 +39,61 @@ bool SoundSourceDetector::start() {
     snd_pcm_hw_params_alloca(&this->hw_params);
 
     if (snd_pcm_hw_params_any(this->pcm_handle, this->hw_params) < 0) {
-        cerr << "错误：无法初始化硬件参数结构。" << endl;
+        Debug::CoutError("无法初始化硬件参数结构。");
         return false;
     }
 
     if (snd_pcm_hw_params_set_access(this->pcm_handle, this->hw_params, SND_PCM_ACCESS_RW_INTERLEAVED) < 0) {
-        cerr << "错误：无法设置访问类型。" << endl;
+        Debug::CoutError("无法设置访问类型。");
         return false;
     }
 
     if (snd_pcm_hw_params_set_format(this->pcm_handle, this->hw_params, this->format) < 0) {
-        cerr << "错误：无法设置格式。" << endl;
+        Debug::CoutError("无法设置格式。");
         return false;
     }
 
     if (snd_pcm_hw_params_set_channels(this->pcm_handle, this->hw_params, this->channels) < 0) {
-        cerr << "错误：无法设置声道数。" << endl;
+        Debug::CoutError("无法设置声道数。");
         return false;
     }
 
     if (snd_pcm_hw_params_set_rate_near(this->pcm_handle, this->hw_params, &this->sample_rate, 0) < 0) {
-        cerr << "错误：无法设置采样率。" << endl;
+        Debug::CoutError("无法设置采样率。");
         return false;
     }
 
     if (snd_pcm_hw_params_set_period_size_near(this->pcm_handle, this->hw_params, &this->period_size, 0) < 0) {
-        cerr << "错误：无法设置周期大小。" << endl;
+        Debug::CoutError("无法设置周期大小。");
         return false;
     }
 
     if (snd_pcm_hw_params(this->pcm_handle, this->hw_params) < 0) {
-        cerr << "错误：无法设置硬件参数。" << endl;
+        Debug::CoutError("无法设置硬件参数。");
         return false;
     }
 
     this->buffer_size = this->samples * this->channels * this->fmt_size;
 
-    cout << "声源捕获开启成功" << endl;
-    cout << "=========================" << endl;
-    cout << "采样率: " << sample_rate << endl;
-    cout << "采样点数: " << samples << endl;
-    cout << "通道数: " << channels << endl;
-    cout << "缓冲区大小: " << buffer_size << endl;
-    cout << "=========================" << endl;
-
+    // cout << "声源捕获开启成功" << endl;
+    // cout << "=========================" << endl;
+    // cout << "采样率: " << sample_rate << endl;
+    // cout << "采样点数: " << samples << endl;
+    // cout << "通道数: " << channels << endl;
+    // cout << "缓冲区大小: " << buffer_size << endl;
+    // cout << "=========================" << endl;
+    Debug::CoutSection("声源捕获开启成功", 
+                        "采样率: {}\n采样点数: {}\n通道数: {}\n缓冲区大小: {}",
+                        sample_rate, samples, channels, buffer_size);
     return true;
 }
 
-void SoundSourceDetector::stop() {
-    snd_pcm_close(pcm_handle);
-}
+void SoundSourceDetector::stop() { snd_pcm_close(pcm_handle); }
 
 // 分帧
 void enframeChannel(float *data, int channel_size, int frame_length, int overlap, float **frames_enframe) {
-    int step_length = frame_length - overlap;              // 步长
-    int frame_num = (channel_size - overlap) / step_length;// 帧数
+    int step_length = frame_length - overlap;               // 步长
+    int frame_num = (channel_size - overlap) / step_length; // 帧数
 
     for (int i = 0; i < frame_num; i++) {
         int start = i * step_length;
@@ -120,7 +114,7 @@ void enframeChannel(float *data, int channel_size, int frame_length, int overlap
     }
 }
 
-int nextpow2(int x) {// 计算大于等于 x 的最小的 2 的幂
+int nextpow2(int x) { // 计算大于等于 x 的最小的 2 的幂
     int i = 0;
     while (pow(2, i) < x) {
         i++;
@@ -128,17 +122,18 @@ int nextpow2(int x) {// 计算大于等于 x 的最小的 2 的幂
     return pow(2, i);
 }
 
-void gccPhat(float *frames_enframe1, float *frames_enframe2, int frame_length, Eigen::Ref<Eigen::VectorXf, 0, Eigen::InnerStride<>> y) {
+void gccPhat(float *frames_enframe1, float *frames_enframe2, int frame_length,
+             Eigen::Ref<Eigen::VectorXf, 0, Eigen::InnerStride<>> y) {
     int ncorr = 2 * frame_length - 1;
     int nfft = nextpow2(ncorr);
 
     fftw_complex *in1, *in2, *out1, *out2, *out3;
     fftw_plan p1, p2, p3;
 
-    in1 = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * nfft);
-    in2 = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * nfft);
-    out1 = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * nfft);
-    out2 = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * nfft);
+    in1 = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
+    in2 = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
+    out1 = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
+    out2 = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
 
     for (int i = 0; i < frame_length; i++) {
         in1[i][0] = frames_enframe1[i];
@@ -175,7 +170,7 @@ void gccPhat(float *frames_enframe1, float *frames_enframe2, int frame_length, E
     }
 
     // 计算 ifft(exp(1i*angle(Gss)))
-    out3 = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * nfft);
+    out3 = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
     p3 = fftw_plan_dft_1d(nfft, in1, out3, FFTW_BACKWARD, FFTW_ESTIMATE);
     fftw_execute(p3);
 
@@ -189,14 +184,14 @@ void gccPhat(float *frames_enframe1, float *frames_enframe2, int frame_length, E
     int half_size = nfft / 2;
     for (int i = 0; i < half_size; i++) {
         swap(xcorr_cac[i], xcorr_cac[i + half_size]);
-    }//对啦
+    } // 对啦
 
     // 计算 y
     int start = nfft / 2 + 1 - (ncorr - 1) / 2;
     int end = nfft / 2 + 1 + (ncorr - 1) / 2;
     for (int i = start - 1; i <= end - 1; i++) {
         y[i - start + 1] = xcorr_cac[i].real();
-    }//对啦
+    } // 对啦
 
     fftw_destroy_plan(p1);
     fftw_destroy_plan(p2);
@@ -208,31 +203,33 @@ void gccPhat(float *frames_enframe1, float *frames_enframe2, int frame_length, E
     fftw_free(out3);
 }
 
-void sinc_interp(Eigen::VectorXf input_signal, Eigen::VectorXf input_time, int num, Eigen::Ref<Eigen::VectorXf> output_signal, Eigen::Ref<Eigen::VectorXf> output_time) {
-    int n_length = input_time.size();       // 原始信号的长度
-    int N = n_length + num * (n_length - 1);// 总点数
+void sinc_interp(Eigen::VectorXf input_signal, Eigen::VectorXf input_time, int num,
+                 Eigen::Ref<Eigen::VectorXf> output_signal, Eigen::Ref<Eigen::VectorXf> output_time) {
+    int n_length = input_time.size();        // 原始信号的长度
+    int N = n_length + num * (n_length - 1); // 总点数
 
-    float y_cac = 0;   // 累加变量
-    float m_before = 0;// 当前插值点之前的原始时间位置
-    float m_back = 0;  // 当前插值点之后的原始时间位置
-    float dt = 0;      // 该插值区间的分辨率
-    float m_cac = 0;   // 新的插值点对应的时间位置
+    float y_cac = 0;                         // 累加变量
+    float m_before = 0;                      // 当前插值点之前的原始时间位置
+    float m_back = 0;                        // 当前插值点之后的原始时间位置
+    float dt = 0;                            // 该插值区间的分辨率
+    float m_cac = 0;                         // 新的插值点对应的时间位置
 
     for (int i = 1; i <= N; i++) {
         if (i % (num + 1) == 1) {
             output_signal[i - 1] = input_signal[ceil(i / (num + 1.0)) - 1];
             output_time[i - 1] = input_time[ceil(i / (num + 1.0)) - 1];
         } else {
-            y_cac = 0;                                                                // 累加变量
-            m_before = input_time[ceil(i / (num + 1.0)) - 1];                         // 当前插值点之前的原始时间位置
-            m_back = input_time[ceil(i / (num + 1.0))];                               // 当前插值点之后的原始时间位置
-            dt = (m_back - m_before) / (num + 1.0);                                   // 该插值区间的分辨率
-            m_cac = m_before + dt * (i - (num + 1) * (ceil(i / (num + 1.0) - 1)) - 1);// 新的插值点对应的时间位置
+            y_cac = 0;                                        // 累加变量
+            m_before = input_time[ceil(i / (num + 1.0)) - 1]; // 当前插值点之前的原始时间位置
+            m_back = input_time[ceil(i / (num + 1.0))];       // 当前插值点之后的原始时间位置
+            dt = (m_back - m_before) / (num + 1.0);           // 该插值区间的分辨率
+            m_cac = m_before + dt * (i - (num + 1) * (ceil(i / (num + 1.0) - 1)) - 1); // 新的插值点对应的时间位置
             for (int j = 0; j < n_length; j++) {
-                y_cac += input_signal[j] * sin((m_cac - input_time[j]) * M_PI) / ((m_cac - input_time[j]) * M_PI);// 进行sinc插值累加
+                y_cac += input_signal[j] * sin((m_cac - input_time[j]) * M_PI) /
+                         ((m_cac - input_time[j]) * M_PI); // 进行sinc插值累加
             }
-            output_signal[i - 1] = y_cac;// 信号赋值
-            output_time[i - 1] = m_cac;  // 时间赋值
+            output_signal[i - 1] = y_cac;                  // 信号赋值
+            output_time[i - 1] = m_cac;                    // 时间赋值
         }
     }
 }
@@ -245,10 +242,10 @@ Eigen::Vector3f SoundSourceDetector::locate() {
         snd_pcm_prepare(this->pcm_handle);
         frames_read = snd_pcm_readi(this->pcm_handle, buffer, this->samples);
     } else if (frames_read < 0) {
-        cout << "错误：无法从PCM设备读取数据。" << endl;
+        Debug::CoutError("无法从PCM设备读取数据。");
         return Eigen::Vector3f(0, 0, 0);
     } else if (frames_read != this->samples) {
-        cout << "错误：从PCM设备读取的数据不完整。" << endl;
+        Debug::CoutError("从PCM设备读取的数据不完整。");
         return Eigen::Vector3f(0, 0, 0);
     }
 
@@ -274,10 +271,10 @@ Eigen::Vector3f SoundSourceDetector::locate() {
 
     // 计算声源定位
     // 步骤2: 分帧加窗
-    int frame_length = 1200;                                // 帧长
-    int overlap = 400;                                      // 帧移
-    int step_length = frame_length - overlap;               // 步长
-    int frame_num = (this->samples - overlap) / step_length;// 帧数
+    int frame_length = 1200;                                 // 帧长
+    int overlap = 400;                                       // 帧移
+    int step_length = frame_length - overlap;                // 步长
+    int frame_num = (this->samples - overlap) / step_length; // 帧数
     float **frames_enframe1 = new float *[frame_num];
     float **frames_enframe2 = new float *[frame_num];
     float **frames_enframe3 = new float *[frame_num];
@@ -433,8 +430,8 @@ Eigen::Vector3f SoundSourceDetector::locate() {
         Eigen::VectorXf input_time = Eigen::VectorXf::LinSpaced(end - start + 1, start, end);
         Eigen::VectorXf input_signal = gcc_cac.segment(start - 1, end - start + 1);
 
-        int n_length = input_time.size();                // 原始信号的长度
-        int N = n_length + inter_points * (n_length - 1);// 总点数
+        int n_length = input_time.size();                 // 原始信号的长度
+        int N = n_length + inter_points * (n_length - 1); // 总点数
         Eigen::VectorXf output_signal(N);
         Eigen::VectorXf output_time(N);
 
@@ -453,12 +450,12 @@ Eigen::Vector3f SoundSourceDetector::locate() {
 
     Eigen::VectorXf delay_ref(21);
     delay_ref << delayPointMax[0] - frame_len, delayPointMax[1] - frame_len, delayPointMax[2] - frame_len,
-            delayPointMax[3] - frame_len, delayPointMax[4] - frame_len, delayPointMax[5] - frame_len,
-            delayPointMax[6] - frame_len, delayPointMax[7] - frame_len, delayPointMax[8] - frame_len,
-            delayPointMax[9] - frame_len, delayPointMax[10] - frame_len, delayPointMax[11] - frame_len,
-            delayPointMax[12] - frame_len, delayPointMax[13] - frame_len, delayPointMax[14] - frame_len,
-            delayPointMax[15] - frame_len, delayPointMax[16] - frame_len, delayPointMax[17] - frame_len,
-            delayPointMax[18] - frame_len, delayPointMax[19] - frame_len, delayPointMax[20] - frame_len;
+        delayPointMax[3] - frame_len, delayPointMax[4] - frame_len, delayPointMax[5] - frame_len,
+        delayPointMax[6] - frame_len, delayPointMax[7] - frame_len, delayPointMax[8] - frame_len,
+        delayPointMax[9] - frame_len, delayPointMax[10] - frame_len, delayPointMax[11] - frame_len,
+        delayPointMax[12] - frame_len, delayPointMax[13] - frame_len, delayPointMax[14] - frame_len,
+        delayPointMax[15] - frame_len, delayPointMax[16] - frame_len, delayPointMax[17] - frame_len,
+        delayPointMax[18] - frame_len, delayPointMax[19] - frame_len, delayPointMax[20] - frame_len;
 
     Eigen::Vector3f obj(1, 1, 1);
 
@@ -468,61 +465,41 @@ Eigen::Vector3f SoundSourceDetector::locate() {
     int number_thresh = 500;
     float error = 100;
     Eigen::MatrixXf factor_matrix(21, 7);
-    factor_matrix << 1, -1, 0, 0, 0, 0, 0,
-            1, 0, -1, 0, 0, 0, 0,
-            1, 0, 0, -1, 0, 0, 0,
-            1, 0, 0, 0, -1, 0, 0,
-            1, 0, 0, 0, 0, -1, 0,
-            1, 0, 0, 0, 0, 0, -1,
-            0, 1, -1, 0, 0, 0, 0,
-            0, 1, 0, -1, 0, 0, 0,
-            0, 1, 0, 0, -1, 0, 0,
-            0, 1, 0, 0, 0, -1, 0,
-            0, 1, 0, 0, 0, 0, -1,
-            0, 0, 1, -1, 0, 0, 0,
-            0, 0, 1, 0, -1, 0, 0,
-            0, 0, 1, 0, 0, -1, 0,
-            0, 0, 1, 0, 0, 0, -1,
-            0, 0, 0, 1, -1, 0, 0,
-            0, 0, 0, 1, 0, -1, 0,
-            0, 0, 0, 1, 0, 0, -1,
-            0, 0, 0, 0, 1, -1, 0,
-            0, 0, 0, 0, 1, 0, -1,
-            0, 0, 0, 0, 0, 1, -1;
+    factor_matrix << 1, -1, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0,
+        0, -1, 0, 1, 0, 0, 0, 0, 0, -1, 0, 1, -1, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 1, 0, 0, 0,
+        -1, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 1, -1, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 1, 0, 0, 0,
+        -1, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 1, 0,
+        -1, 0, 0, 0, 0, 0, 1, -1;
 
-    Eigen::Matrix<float, 7, 3> mic;//麦克风拓扑结构
-    mic << 0, 0, 0,
-            0, 0.04, 0,
-            0.034641, 0.02, 0,
-            0.034641, -0.02, 0,
-            0, -0.04, 0,
-            -0.034641, -0.02, 0,
-            -0.034641, 0.02, 0;
-    float v = 340;//声速
-
+    Eigen::Matrix<float, 7, 3> mic; // 麦克风拓扑结构
+    mic << 0, 0, 0, 0, 0.04, 0, 0.034641, 0.02, 0, 0.034641, -0.02, 0, 0, -0.04, 0, -0.034641, -0.02, 0, -0.034641,
+        0.02, 0;
+    float v = 340; // 声速
 
     // 梯度下降法
-    while (error > error_thresh && number < number_thresh) {// 当误差或次数达到门限的时候退出
+    while (error > error_thresh && number < number_thresh) { // 当误差或次数达到门限的时候退出
         Eigen::VectorXf range = (mic.rowwise() - obj.transpose()).rowwise().norm();
         Eigen::VectorXf delay = factor_matrix * range * 2 / v * this->sample_rate;
         error = (delay - delay_ref).array().square().sum();
-        Eigen::MatrixXf range_gradient = (obj.transpose().colwise().replicate(7) - mic).array().colwise() / range.array();
+        Eigen::MatrixXf range_gradient =
+            (obj.transpose().colwise().replicate(7) - mic).array().colwise() / range.array();
         Eigen::MatrixXf delay_gradient = factor_matrix * range_gradient;
         Eigen::MatrixXf delay_error = (delay - delay_ref).rowwise().replicate(3);
-        Eigen::VectorXf error_gradient = (delay_gradient.array() * delay_error.array()).colwise().sum() * 4 * sample_rate / v;
+        Eigen::VectorXf error_gradient =
+            (delay_gradient.array() * delay_error.array()).colwise().sum() * 4 * sample_rate / v;
         obj -= alpha * error_gradient.transpose();
         number++;
     }
 
     // cout << "obj: " << obj[0] << " " << obj[1] << " " << obj[2] << endl;//YESYESYES！！！
     return obj;
-    //结果格式：x y z
-    //          ^ y
-    //          |
-    //          |
-    //          |
-    // -------Kinect-------> x
-    //          |
-    //          |
-    //          |
+    // 结果格式：x y z
+    //           ^ y
+    //           |
+    //           |
+    //           |
+    //  -------Kinect-------> x
+    //           |
+    //           |
+    //           |
 }

@@ -8,6 +8,9 @@
 #include <open3d/Open3D.h>
 #include <k4a/k4a.h>
 #include <iostream>
+#include <CasUtility.h>
+
+using namespace cas::utility;
 
 namespace cas{
     //open3d数据

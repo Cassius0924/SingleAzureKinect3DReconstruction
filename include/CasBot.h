@@ -12,10 +12,14 @@
 #include <string>
 #include <time.h>
 
+#include <functional>
 #include <sys/select.h>
 #include <sys/socket.h>
 
+#include "CasUtility.h"
+
 using namespace std;
+using namespace cas::utility;
 
 // 通信指令帧的定义
 #define FLAG_START 0xfe
@@ -79,6 +83,10 @@ namespace cas {
             int fd;
 
         public:
+            enum CommandSet{
+                MOTOR = 0x01,
+                LED = 0x02,
+            };
             STM32(string serial_port_name = DEFAULT_SERIAL_PORT_NAME);
             bool sendData(unsigned char *send_buffer, const int send_length);
             // bool sendData(char *send_buffer, const int send_length);
@@ -93,12 +101,10 @@ namespace cas {
 
         public:
             BotMotor(string serial_port_name);
-            bool rotate(string direction);
+            bool rotate(string direction, std::function<void()> onRotated = nullptr);
         };
 
-
-
-        class BotCar{
+        class BotCar {
         private:
             int fd;
             float speed;
@@ -132,14 +138,17 @@ namespace cas {
 
         class BotLed : virtual public STM32 {
         private:
-            unsigned char buffer[4];
+            unsigned char buffer[8];
+
         public:
             enum LedColor {
-                RED = 'E',
-                GREEN = 'G',
+                RED = 0x01,
+                GREEN = 0x02,
+                BLUE = 0x03,
+                CUSTOM = 0x04,
             };
             BotLed(string serial_port_name);
-            bool setLedColor(LedColor color);
+            bool setLedColor(LedColor color, int r = 0, int g = 0, int b = 0);
         };
     } // namespace bot
 } // namespace cas

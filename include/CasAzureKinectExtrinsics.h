@@ -10,8 +10,10 @@
 #include <k4a/k4a.hpp>
 
 #include <Eigen/Core>
+#include <CasUtility.h>
 
 using namespace std;
+using namespace cas::utility;
 
 //打开 Azure Kinect 设备
 namespace cas {

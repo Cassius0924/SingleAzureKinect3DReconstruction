@@ -6,7 +6,9 @@
 #define _CASAZUREKINECT_H_
 
 #include <k4a/k4a.hpp>
+#include <CasUtility.h>
 
+using namespace cas::utility;
 
 namespace cas {
     namespace kinect {

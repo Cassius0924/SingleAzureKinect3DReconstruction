@@ -21,15 +21,14 @@ using namespace std;
 bool cas::kinect::checkKinectNum(int num) {
     const uint32_t device_count = k4a::device::get_installed_count();
     if (0 == device_count) {
-        cerr << "错误：没有发现 K4A 设备。" << endl;
+        Debug::CoutError("没有发现 Auzre Kinect。");
         return false;
     } else {
-        cout << "发现 " << device_count << " 个已连接的设备。" << endl;
+        Debug::CoutInfo("发现 {} 个已连接的 Kinect。", device_count);
+
         if (1 != device_count) {// 超过1个设备，也输出错误信息。
-            cerr << "错误：发现多个 K4A 设备。" << endl;
+            Debug::CoutError("发现多个 Azure Kinect 设备。");
             return false;
-        } else {
-            cout << "发现 1 个 K4A 设备。" << endl;
         }
     }
     return true;
@@ -41,7 +40,7 @@ bool cas::kinect::stabilizeCamera(k4a::device &device) {
     int i_auto_error = 0;// 统计自动曝光的失败次数
     while (true) {
         if (device.get_capture(&capture)) {
-            cout << "|" << flush;   // flush：刷新缓冲区
+            cout << "|" ;;   // flush：刷新缓冲区
             // 跳过前 n 个（成功的数据采集）循环，用来稳定
             if (i_auto != 30) {
                 i_auto++;
@@ -51,12 +50,12 @@ bool cas::kinect::stabilizeCamera(k4a::device &device) {
                 break;// 跳出该循环，完成相机的稳定过程
             }
         } else {
-            cerr << i_auto_error << "自动曝光失败" << endl;
+            Debug::CoutError("{}，自动曝光失败", i_auto_error);
             if (i_auto_error != 30) {
                 i_auto_error++;
                 continue;
             } else {
-                cerr << "错误：无法自动曝光。" << endl;
+                Debug::CoutError("无法自动曝光");
                 return false;
             }
         }

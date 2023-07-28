@@ -1,0 +1,11 @@
+syntax = "proto3";
+package cas.proto;
+
+// KinectMode
+message KinectMode {
+    enum Mode {
+        RECONSTRCUTION = 0;
+        REAL_TIME = 1;
+    }
+    Mode mode = 1;
+}

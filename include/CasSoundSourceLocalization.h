@@ -9,8 +9,10 @@
 #include <Eigen/Dense>
 #include <alsa/asoundlib.h>
 #include <iostream>
+#include <CasUtility.h>
 
 using namespace std;
+using namespace cas::utility;
 
 namespace cas {
     namespace ssl {

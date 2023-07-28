@@ -28,7 +28,7 @@ bool getLocalIp(char *ip) {
                     // 拿到该网口地址做对比
                     ip = (inet_ntoa(((struct sockaddr_in *)(&buf[intrface].ifr_addr))->sin_addr));
                     if (strstr(ip, "192.168.")) {
-                        cout << "服务器本地IP:" << ip << endl;
+                        Debug::CoutInfo("服务器本地IP: {}", ip);
                         break;
                     }
                 }
@@ -37,14 +37,14 @@ bool getLocalIp(char *ip) {
         close(fd);
         return true;
     }
-    cout << "获取本地IP地址失败" << endl;
+    Debug::CoutError("获取本地IP地址失败");
     return false;
 }
 
 /**
  * 创建服务器，阻塞进程，等待服务器连接。
  */
-cas::net::Client::Client(const int port) {
+cas::net::Client::Client(const int port, std::function<void()> onConnect) {
 
     // int cas::net::creatServerSocket(int port) {
     int server_socket_fd = -1;
@@ -60,7 +60,7 @@ cas::net::Client::Client(const int port) {
 
     char ip_local[32 + 1] = {0};
     if (!getLocalIp(ip_local)) {
-        cout << "连接IP失败: " << ip_local << endl;
+        Debug::CoutError("连接IP失败: {}", ip_local);
         exit(0);
     }
     inet_aton(ip_local, &sockaddr.sin_addr); // 将一个字符串IP地址转换为一个32位的网络序列IP地址
@@ -68,40 +68,41 @@ cas::net::Client::Client(const int port) {
     server_socket_fd = socket(AF_INET, SOCK_STREAM, 0); // 创建套接字
 
     // setsockopt(server_socket_fd, IPPROTO_TCP, O_NDELAY, (char *)&flag, sizeof(int));
-    int on = 1;
-    int result = setsockopt(server_socket_fd, IPPROTO_TCP, TCP_NODELAY, (char *)&on, sizeof(int)); // 1 - on, 0 - off
-    if (result == -1) {
-        cerr << "Close Nagle error" << endl;
-    }
+    // int on = 1;
+    // int result = setsockopt(server_socket_fd, IPPROTO_TCP, TCP_NODELAY, (char *)&on, sizeof(int)); // 1 - on, 0 - off
+    // if (result == -1) {
+    //     Debug::CoutError("关闭 Nagle error");
+    // }
 
     if (server_socket_fd < 0) {
-        cerr << "Socket 创建失败" << endl;
+        Debug::CoutError("Socket 创建失败");
         exit(0);
     }
 
     if (bind(server_socket_fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) != 0) { // 绑定套接字
-        cerr << "Socket 绑定失败" << endl;
+        Debug::CoutError("Socket 绑定失败");
         close(server_socket_fd);
         exit(0);
     }
     if (listen(server_socket_fd, 1) != 0) { // 监听套接字
-        cerr << "Socket 监听失败" << endl;
+        Debug::CoutError("Socket 监听失败");
         close(server_socket_fd);
         exit(0);
     }
 
-    cout << "等待客户端连接..." << endl;
-
+    Debug::CoutDebug("等待客户端连接...");
     this->fd = accept(server_socket_fd, (struct sockaddr *)addr, &addr_len);
-    cout << "客户端连接成功" << endl;
 
     if (this->fd < 0) {
-        cerr << "Socket 接收失败" << endl;
+        Debug::CoutError("Socket 接收失败");
         close(server_socket_fd);
         free(addr);
         exit(0);
     } else {
-        cout << "客户端IP: " << inet_ntoa(addr->sin_addr) << ":" << ntohs(addr->sin_port) << endl;
+        Debug::CoutSuccess("客户端连接成功，客户端IP: {}:{}", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+        if (onConnect != nullptr) {
+            onConnect();
+        }
     };
 }
 
@@ -110,18 +111,17 @@ bool cas::net::Client::sendMessage(google::protobuf::Message &message) {
     ostringstream output_stream(ios::binary);
 
     int message_size = message.ByteSizeLong();
-    output_stream.write(reinterpret_cast<const char*>(&message_size), sizeof(message_size));
+    output_stream.write(reinterpret_cast<const char *>(&message_size), sizeof(message_size));
 
     if (!message.SerializeToOstream(&output_stream)) {
-        cerr << "序列化消息失败" << endl;
+        Debug::CoutError("序列化消息失败");
         return false;
     }
 
     // 获取序列化后的数据并发送到网络对端
     string serialized_data = output_stream.str();
-    // cout << "serialized_data_size: " << serialized_data.size() << endl;
     if (write(this->fd, serialized_data.data(), serialized_data.size()) < 0) {
-        cerr << "发送消息失败" << endl;
+        Debug::CoutError("发送消息失败");
         return false;
     }
     return true;

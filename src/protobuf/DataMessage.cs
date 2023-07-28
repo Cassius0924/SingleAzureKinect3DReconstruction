@@ -27,24 +27,25 @@ namespace Cas.Proto {
             "ChFEYXRhTWVzc2FnZS5wcm90bxIJY2FzLnByb3RvGgpNZXNoLnByb3RvGhFT",
             "b3VuZFNvdXJjZS5wcm90bxoRVGVtcEFuZEh1bWkucHJvdG8aDEJvdENhci5w",
             "cm90bxoQQm90R3JpcHBlci5wcm90bxoOQm90TW90b3IucHJvdG8aDEJvdEFy",
-            "bS5wcm90bxoMQm90TGVkLnByb3RvIq4ECgtEYXRhTWVzc2FnZRIpCgR0eXBl",
-            "GAEgASgOMhsuY2FzLnByb3RvLkRhdGFNZXNzYWdlLlR5cGUSHwoEbWVzaBgC",
-            "IAEoCzIPLmNhcy5wcm90by5NZXNoSAASLgoMc291bmRfc291cmNlGAMgASgL",
-            "MhYuY2FzLnByb3RvLlNvdW5kU291cmNlSAASJAoHYm90X2NhchgEIAEoCzIR",
-            "LmNhcy5wcm90by5Cb3RDYXJIABIsCgtib3RfZ3JpcHBlchgFIAEoCzIVLmNh",
-            "cy5wcm90by5Cb3RHcmlwcGVySAASKAoJYm90X21vdG9yGAYgASgLMhMuY2Fz",
-            "LnByb3RvLkJvdE1vdG9ySAASJAoHYm90X2FybRgHIAEoCzIRLmNhcy5wcm90",
-            "by5Cb3RBcm1IABIkCgdib3RfbGVkGAggASgLMhEuY2FzLnByb3RvLkJvdExl",
-            "ZEgAEi8KDXRlbXBfYW5kX2h1bWkYCSABKAsyFi5jYXMucHJvdG8uVGVtcEFu",
-            "ZEh1bWlIACKfAQoEVHlwZRIJCgVPVEhFUhAAEggKBE1FU0gQARIWCglFWElU",
-            "X01FU0gQ////////////ARIQCgxTT1VORF9TT1VSQ0UQAhILCgdCT1RfQ0FS",
-            "EAMSDwoLQk9UX0dSSVBQRVIQBBINCglCT1RfTU9UT1IQBRILCgdCT1RfQVJN",
-            "EAYSCwoHQk9UX0xFRBAHEhEKDVRFTVBfQU5EX0hVTUkQCEIGCgRkYXRhYgZw",
-            "cm90bzM="));
+            "bS5wcm90bxoMQm90TGVkLnByb3RvGhBLaW5lY3RNb2RlLnByb3RvIu0ECgtE",
+            "YXRhTWVzc2FnZRIpCgR0eXBlGAEgASgOMhsuY2FzLnByb3RvLkRhdGFNZXNz",
+            "YWdlLlR5cGUSHwoEbWVzaBgCIAEoCzIPLmNhcy5wcm90by5NZXNoSAASLgoM",
+            "c291bmRfc291cmNlGAMgASgLMhYuY2FzLnByb3RvLlNvdW5kU291cmNlSAAS",
+            "JAoHYm90X2NhchgEIAEoCzIRLmNhcy5wcm90by5Cb3RDYXJIABIsCgtib3Rf",
+            "Z3JpcHBlchgFIAEoCzIVLmNhcy5wcm90by5Cb3RHcmlwcGVySAASKAoJYm90",
+            "X21vdG9yGAYgASgLMhMuY2FzLnByb3RvLkJvdE1vdG9ySAASJAoHYm90X2Fy",
+            "bRgHIAEoCzIRLmNhcy5wcm90by5Cb3RBcm1IABIkCgdib3RfbGVkGAggASgL",
+            "MhEuY2FzLnByb3RvLkJvdExlZEgAEi8KDXRlbXBfYW5kX2h1bWkYCSABKAsy",
+            "Fi5jYXMucHJvdG8uVGVtcEFuZEh1bWlIABIsCgtraW5lY3RfbW9kZRgKIAEo",
+            "CzIVLmNhcy5wcm90by5LaW5lY3RNb2RlSAAisAEKBFR5cGUSCQoFT1RIRVIQ",
+            "ABIICgRNRVNIEAESFgoJRVhJVF9NRVNIEP///////////wESEAoMU09VTkRf",
+            "U09VUkNFEAISCwoHQk9UX0NBUhADEg8KC0JPVF9HUklQUEVSEAQSDQoJQk9U",
+            "X01PVE9SEAUSCwoHQk9UX0FSTRAGEgsKB0JPVF9MRUQQBxIRCg1URU1QX0FO",
+            "RF9IVU1JEAgSDwoLS0lORUNUX01PREUQCUIGCgRkYXRhYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Cas.Proto.MeshReflection.Descriptor, global::Cas.Proto.SoundSourceReflection.Descriptor, global::Cas.Proto.TempAndHumiReflection.Descriptor, global::Cas.Proto.BotCarReflection.Descriptor, global::Cas.Proto.BotGripperReflection.Descriptor, global::Cas.Proto.BotMotorReflection.Descriptor, global::Cas.Proto.BotArmReflection.Descriptor, global::Cas.Proto.BotLedReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Cas.Proto.MeshReflection.Descriptor, global::Cas.Proto.SoundSourceReflection.Descriptor, global::Cas.Proto.TempAndHumiReflection.Descriptor, global::Cas.Proto.BotCarReflection.Descriptor, global::Cas.Proto.BotGripperReflection.Descriptor, global::Cas.Proto.BotMotorReflection.Descriptor, global::Cas.Proto.BotArmReflection.Descriptor, global::Cas.Proto.BotLedReflection.Descriptor, global::Cas.Proto.KinectModeReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Cas.Proto.DataMessage), global::Cas.Proto.DataMessage.Parser, new[]{ "Type", "Mesh", "SoundSource", "BotCar", "BotGripper", "BotMotor", "BotArm", "BotLed", "TempAndHumi" }, new[]{ "Data" }, new[]{ typeof(global::Cas.Proto.DataMessage.Types.Type) }, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Cas.Proto.DataMessage), global::Cas.Proto.DataMessage.Parser, new[]{ "Type", "Mesh", "SoundSource", "BotCar", "BotGripper", "BotMotor", "BotArm", "BotLed", "TempAndHumi", "KinectMode" }, new[]{ "Data" }, new[]{ typeof(global::Cas.Proto.DataMessage.Types.Type) }, null, null)
           }));
     }
     #endregion
@@ -110,6 +111,9 @@ namespace Cas.Proto {
           break;
         case DataOneofCase.TempAndHumi:
           TempAndHumi = other.TempAndHumi.Clone();
+          break;
+        case DataOneofCase.KinectMode:
+          KinectMode = other.KinectMode.Clone();
           break;
       }
 
@@ -230,6 +234,18 @@ namespace Cas.Proto {
       }
     }
 
+    /// <summary>Field number for the "kinect_mode" field.</summary>
+    public const int KinectModeFieldNumber = 10;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Cas.Proto.KinectMode KinectMode {
+      get { return dataCase_ == DataOneofCase.KinectMode ? (global::Cas.Proto.KinectMode) data_ : null; }
+      set {
+        data_ = value;
+        dataCase_ = value == null ? DataOneofCase.None : DataOneofCase.KinectMode;
+      }
+    }
+
     private object data_;
     /// <summary>Enum of possible cases for the "data" oneof.</summary>
     public enum DataOneofCase {
@@ -242,6 +258,7 @@ namespace Cas.Proto {
       BotArm = 7,
       BotLed = 8,
       TempAndHumi = 9,
+      KinectMode = 10,
     }
     private DataOneofCase dataCase_ = DataOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -281,6 +298,7 @@ namespace Cas.Proto {
       if (!object.Equals(BotArm, other.BotArm)) return false;
       if (!object.Equals(BotLed, other.BotLed)) return false;
       if (!object.Equals(TempAndHumi, other.TempAndHumi)) return false;
+      if (!object.Equals(KinectMode, other.KinectMode)) return false;
       if (DataCase != other.DataCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -298,6 +316,7 @@ namespace Cas.Proto {
       if (dataCase_ == DataOneofCase.BotArm) hash ^= BotArm.GetHashCode();
       if (dataCase_ == DataOneofCase.BotLed) hash ^= BotLed.GetHashCode();
       if (dataCase_ == DataOneofCase.TempAndHumi) hash ^= TempAndHumi.GetHashCode();
+      if (dataCase_ == DataOneofCase.KinectMode) hash ^= KinectMode.GetHashCode();
       hash ^= (int) dataCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -353,6 +372,10 @@ namespace Cas.Proto {
         output.WriteRawTag(74);
         output.WriteMessage(TempAndHumi);
       }
+      if (dataCase_ == DataOneofCase.KinectMode) {
+        output.WriteRawTag(82);
+        output.WriteMessage(KinectMode);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -399,6 +422,10 @@ namespace Cas.Proto {
         output.WriteRawTag(74);
         output.WriteMessage(TempAndHumi);
       }
+      if (dataCase_ == DataOneofCase.KinectMode) {
+        output.WriteRawTag(82);
+        output.WriteMessage(KinectMode);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -435,6 +462,9 @@ namespace Cas.Proto {
       }
       if (dataCase_ == DataOneofCase.TempAndHumi) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(TempAndHumi);
+      }
+      if (dataCase_ == DataOneofCase.KinectMode) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(KinectMode);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -499,6 +529,12 @@ namespace Cas.Proto {
             TempAndHumi = new global::Cas.Proto.TempAndHumi();
           }
           TempAndHumi.MergeFrom(other.TempAndHumi);
+          break;
+        case DataOneofCase.KinectMode:
+          if (KinectMode == null) {
+            KinectMode = new global::Cas.Proto.KinectMode();
+          }
+          KinectMode.MergeFrom(other.KinectMode);
           break;
       }
 
@@ -593,6 +629,15 @@ namespace Cas.Proto {
             TempAndHumi = subBuilder;
             break;
           }
+          case 82: {
+            global::Cas.Proto.KinectMode subBuilder = new global::Cas.Proto.KinectMode();
+            if (dataCase_ == DataOneofCase.KinectMode) {
+              subBuilder.MergeFrom(KinectMode);
+            }
+            input.ReadMessage(subBuilder);
+            KinectMode = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -684,6 +729,15 @@ namespace Cas.Proto {
             TempAndHumi = subBuilder;
             break;
           }
+          case 82: {
+            global::Cas.Proto.KinectMode subBuilder = new global::Cas.Proto.KinectMode();
+            if (dataCase_ == DataOneofCase.KinectMode) {
+              subBuilder.MergeFrom(KinectMode);
+            }
+            input.ReadMessage(subBuilder);
+            KinectMode = subBuilder;
+            break;
+          }
         }
       }
     }
@@ -705,6 +759,7 @@ namespace Cas.Proto {
         [pbr::OriginalName("BOT_ARM")] BotArm = 6,
         [pbr::OriginalName("BOT_LED")] BotLed = 7,
         [pbr::OriginalName("TEMP_AND_HUMI")] TempAndHumi = 8,
+        [pbr::OriginalName("KINECT_MODE")] KinectMode = 9,
       }
 
     }

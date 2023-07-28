@@ -11,8 +11,10 @@
 //函数：sendPointCloudToServer，参数：点云数据
 
 #include "string"
+#include <CasUtility.h>
 
 using namespace std;
+using namespace cas::utility;
 
 namespace cas {
     class CasWebSocket {

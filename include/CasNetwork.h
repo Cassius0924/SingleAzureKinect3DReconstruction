@@ -12,6 +12,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <netinet/tcp.h> //TCP_NODELAY
+#include <CasUtility.h>
+
+using namespace cas::utility;
 
 namespace cas {
     namespace net {
@@ -30,6 +33,8 @@ namespace cas {
 
         public:
             Client(const int port);
+            // 反馈函数
+            Client(const int port, std::function<void()> onConnect = nullptr);
             bool sendMessage(google::protobuf::Message &message);
             int recvData(unsigned char *recv_buffer, const int recv_length);
             bool recvMessage(cas::proto::DataMessage &message);

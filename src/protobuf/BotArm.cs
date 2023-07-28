@@ -24,12 +24,13 @@ namespace Cas.Proto {
     static BotArmReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "CgxCb3RBcm0ucHJvdG8SCWNhcy5wcm90byIdCgZCb3RBcm0SEwoLZGF0YV9i",
-            "dWZmZXIYASABKAxiBnByb3RvMw=="));
+            "CgxCb3RBcm0ucHJvdG8SCWNhcy5wcm90byJACgZCb3RBcm0SEwoLZGF0YV9i",
+            "dWZmZXIYASABKAwiIQoETW9kZRIJCgVBbmdsZRAAEg4KCkNPT1JESU5BVEUQ",
+            "AWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Cas.Proto.BotArm), global::Cas.Proto.BotArm.Parser, new[]{ "DataBuffer" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Cas.Proto.BotArm), global::Cas.Proto.BotArm.Parser, new[]{ "DataBuffer" }, null, new[]{ typeof(global::Cas.Proto.BotArm.Types.Mode) }, null, null)
           }));
     }
     #endregion
@@ -222,6 +223,19 @@ namespace Cas.Proto {
       }
     }
     #endif
+
+    #region Nested types
+    /// <summary>Container for nested types declared in the BotArm message type.</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static partial class Types {
+      public enum Mode {
+        [pbr::OriginalName("Angle")] Angle = 0,
+        [pbr::OriginalName("COORDINATE")] Coordinate = 1,
+      }
+
+    }
+    #endregion
 
   }
 
