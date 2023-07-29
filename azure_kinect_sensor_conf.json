@@ -1,5 +1,5 @@
 {
-    "color_format": "K4A_IMAGE_FORMAT_COLOR_MJPG",
+    "color_format": "K4A_IMAGE_FORMAT_COLOR_BGRA32",
     "color_resolution": "K4A_COLOR_RESOLUTION_1536P",
     "depth_delay_off_color_usec": 0,
     "depth_mode": "K4A_DEPTH_MODE_NFOV_UNBINNED",
