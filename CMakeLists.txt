@@ -18,13 +18,6 @@ find_package(k4a REQUIRED)
 find_package(Eigen3 REQUIRED)
 include_directories("/usr/include/eigen3")
 
-# set(Protobuf_FOUND "True")
-# set(Protobuf_VERSION "3.20.3")
-# set(Protobuf_INCLUDE_DIRS "/usr/local/include")
-# set(Protobuf_LIBRARIES "/usr/local/lib/libprotobuf.so;-lpthread")
-# set(Protobuf_PROTOC_LIBRARIES "/usr/local/lib/libprotoc.so;-lpthread")
-# set(Protobuf_LITE_LIBRARIES "/usr/local/lib/libprotobuf-lite.so;-lpthread")
-
 # Protobuf
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})

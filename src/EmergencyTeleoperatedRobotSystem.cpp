@@ -87,8 +87,7 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     float DEPTH_DIFF = program_config.getFloat("depth_diff");
 
     k4a::device device;
-
-    // k4a_device_configuration_t config;
+    // k4a_device_t device;
 
     cas::bot::BotArm bot_arm(BOT_ARM_SERIAL_PORT_NAME);
     cas::bot::BotMotor bot_motor(STM32_SERIAL_PORT_NAME);
@@ -104,17 +103,18 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
 
     // 打开（默认）设备
     device = k4a::device::open(K4A_DEVICE_DEFAULT);
+    // k4a_device_open(0, &device);
     // cout << "打开 Azure Kinect 设备" << endl;
     k4a_device_configuration_t config;
-
 
     // 配置并启动设备
     config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
     config.camera_fps = K4A_FRAMES_PER_SECOND_30;
-    config.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;    //TODO: 试试 BGRA32
+    config.color_format = K4A_IMAGE_FORMAT_COLOR_MJPG; // TODO: 试试 BGRA32
     config.color_resolution = K4A_COLOR_RESOLUTION_1536P;
     config.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
     config.synchronized_images_only = true; // 只输出同步的图像，即同步深度图和彩色图
+    // k4a_device_start_cameras(device, &config);
     device.start_cameras(&config);
     cout << "开启相机。" << endl;
 
@@ -125,7 +125,10 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     cout << "------------------------------------" << endl;
 
     k4a::calibration k4a_calibration = device.get_calibration(config.depth_mode, config.color_resolution);
+    // _k4a_calibration_t k4a_calibration;
+    // k4a_device_get_calibration(device, config.depth_mode, config.color_resolution, &k4a_calibration);
     k4a::transformation k4a_transformation = k4a::transformation(k4a_calibration);
+    // k4a_transformation_t k4a_transformation = k4a_transformation_create(&k4a_calibration);
 
     if (IS_CONNECT_ARM) {
         bot_arm.reset();
@@ -214,10 +217,6 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                     //     cerr << "初始化相机失败!" << endl;
                     //     return -1;
                     // }
-
-                    // recording_file_name = "recon_" + utility::GetCurrentTimeStamp() + ".mkv";
-                    // mkv_file_path = recording_folder_path + recording_file_name;
-                    // recorder.OpenRecord(mkv_file_path);
 
                     unique_lock<mutex> lock(recon_mutex);
                     flag_recording = true;
@@ -331,9 +330,9 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
     // 设备类型
     core::Device cuda_ = core::Device("cuda:0");
 
-    io::AzureKinectSensorConfig sensor_config;
-    string azure_kinect_config_file = "../azure_kinect_sensor_conf.json";
-    io::ReadIJsonConvertibleFromJSON(azure_kinect_config_file, sensor_config);
+    // io::AzureKinectSensorConfig sensor_config;
+    // string azure_kinect_config_file = "../azure_kinect_sensor_conf.json";
+    // io::ReadIJsonConvertibleFromJSON(azure_kinect_config_file, sensor_config);
     // io::AzureKinectSensor sensor(sensor_config);
     // io::AzureKinectRecorder recorder(sensor_config, 0);
     // if (!recorder.InitSensor()) {
@@ -343,7 +342,6 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
 
     // sensor.Connect(0);
     // Debug::CoutSuccess("相机初始化成功");
-
 
     while (true) {
         switch (kinect_mode) {
@@ -553,7 +551,8 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                                                            point_cloud_image_data[3 * i + 1] / 1000.0f,
                                                            point_cloud_image_data[3 * i + 2] / 1000.0f);
                         cloud.colors_[i] =
-                            Eigen::Vector3d(color_image_data[4 * i + 2] / 255.0f, color_image_data[4 * i + 1] / 255.0f,
+                            Eigen::Vector3d(color_image_data[4 * i + 2] / 255.0f, color_image_data[4 * i + 1] /
+                            255.0f,
                                             color_image_data[4 * i + 0] / 255.0f);
                     } else {
                         cloud.points_[i] = Eigen::Vector3d::Zero();
@@ -561,22 +560,21 @@ int main(int argc, char **argv) { // TODO: 可以传参，传入配置文件路�
                     }
                 }
 
-                // shared_ptr<geometry::RGBDImage> image;
-                // do {
-                //     image = sensor.CaptureFrame(false);
-                // } while (image == nullptr);
+                // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
-                Debug::CoutDebug("实时 1 帧");
+                // k4a::capture capture;
+
+                // Debug::CoutDebug("实时 1 帧");
                 // 将iamge转点云
-                // auto point_cloud_p = geometry::PointCloud::CreateFromRGBDImage(
+                // auto cloud = *geometry::PointCloud::CreateFromRGBDImage(
                 //     *image, camera::PinholeCameraIntrinsic(
                 //                 camera::PinholeCameraIntrinsicParameters::Kinect2DepthCameraDefault));
+
                 auto point_cloud = *cloud.VoxelDownSample(0.03);
 
                 geometry::KDTreeSearchParamHybrid kd_tree_param(0.03 * 2, 30);
 
                 point_cloud.EstimateNormals(kd_tree_param);
-
 
                 // point_cloud转mesh
                 vector<double> distances = point_cloud.ComputeNearestNeighborDistance();
