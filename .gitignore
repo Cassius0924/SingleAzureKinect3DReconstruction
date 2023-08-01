@@ -9,3 +9,8 @@ build
 
 /src/*.ply
 /src/*.pcd
+
+/src/point_clouds_recognition
+/src/protobuf/*.cc
+/src/protobuf/*.cs
+/src/protobuf/*.h
